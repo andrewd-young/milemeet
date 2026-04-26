@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -12,16 +13,20 @@ import { FontAwesome5 } from '@expo/vector-icons'
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
 import { supabase } from '../../lib/api/supabase'
 import type { MainTabParamList } from '../../types/navigation'
 import type { Tables } from '../../types/supabase'
 import { globalStyles } from '../styles'
+import { colors, radii } from '../theme'
 
 type Runner = Tables<'runners'>
 type ConnectionWithPartner = Tables<'run_connections'> & { partner: Runner }
 type ConnectionsNav = BottomTabNavigationProp<MainTabParamList, 'Connections'>
 
 const ConnectionsScreen = () => {
+  const insets = useSafeAreaInsets()
   const navigation = useNavigation<ConnectionsNav>()
   const [connections, setConnections] = useState<ConnectionWithPartner[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -87,61 +92,57 @@ const ConnectionsScreen = () => {
     }, []),
   )
 
-  const formatPace = (pace: number): string => {
-    const minutes = Math.floor(pace)
-    const seconds = Math.round((pace - minutes) * 60)
-    return `${minutes}:${seconds.toString().padStart(2, '0')}/mi`
+  const formatPace = (pace: number) => {
+    const m = Math.floor(pace)
+    const sec = Math.round((pace - m) * 60)
+    return `${m}:${sec.toString().padStart(2, '0')}/mi`
   }
 
   const renderConnection = ({ item }: { item: ConnectionWithPartner }) => {
     const { partner } = item
-    const daysLabel =
-      partner.run_days && partner.run_days.length > 0
-        ? partner.run_days.join(' • ')
-        : 'Flexible'
-    const timesLabel =
-      partner.run_times && partner.run_times.length > 0
-        ? partner.run_times.join(' • ')
-        : 'Any time'
+    const daysLabel = partner.run_days?.length
+      ? partner.run_days.join(' · ')
+      : 'Flexible'
+    const timesLabel = partner.run_times?.length
+      ? partner.run_times.join(', ')
+      : 'Any time'
 
     return (
-      <View style={globalStyles.runnerCard}>
-        <View style={globalStyles.runnerCardHeader}>
-          <View style={globalStyles.runnerAvatar}>
-            <FontAwesome5 name="running" size={22} color="#16a34a" />
+      <View style={s.card}>
+        <View style={s.header}>
+          <View style={s.avatar}>
+            <FontAwesome5 name="running" size={20} color={colors.accent} />
           </View>
-          <View style={globalStyles.runnerHeaderText}>
-            <Text style={globalStyles.runnerName}>{partner.name}</Text>
-            <Text style={globalStyles.runnerNeighborhood}>
-              {partner.neighborhood}
-            </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={s.name}>{partner.name}</Text>
+            <Text style={s.neighborhood}>{partner.neighborhood}</Text>
+          </View>
+          <View style={s.savedBadge}>
+            <Text style={s.savedBadgeText}>Saved</Text>
           </View>
         </View>
 
-        <View style={globalStyles.runnerMetaRow}>
-          <View style={globalStyles.runnerChip}>
-            <Text style={globalStyles.runnerChipText}>
-              Pace {formatPace(partner.pace)}
-            </Text>
+        <View style={s.chipsRow}>
+          <View style={s.chip}>
+            <Text style={s.chipLabel}>PACE</Text>
+            <Text style={s.chipValue}>{formatPace(partner.pace)}</Text>
           </View>
-          <View style={globalStyles.runnerChip}>
-            <Text style={globalStyles.runnerChipText}>
+          <View style={s.chip}>
+            <Text style={s.chipLabel}>DISTANCE</Text>
+            <Text style={s.chipValue}>
               {partner.distance_min}–{partner.distance_max} mi
             </Text>
           </View>
         </View>
 
-        <View style={globalStyles.runnerMetaRow}>
-          <View style={globalStyles.runnerPill}>
-            <Text style={globalStyles.runnerPillLabel}>Days</Text>
-            <Text style={globalStyles.runnerPillValue}>{daysLabel}</Text>
+        <View style={s.pillsRow}>
+          <View style={s.pill}>
+            <Text style={s.pillLabel}>DAYS</Text>
+            <Text style={s.pillValue}>{daysLabel}</Text>
           </View>
-        </View>
-
-        <View style={globalStyles.runnerMetaRow}>
-          <View style={globalStyles.runnerPill}>
-            <Text style={globalStyles.runnerPillLabel}>Time</Text>
-            <Text style={globalStyles.runnerPillValue}>{timesLabel}</Text>
+          <View style={s.pill}>
+            <Text style={s.pillLabel}>TIME</Text>
+            <Text style={s.pillValue}>{timesLabel}</Text>
           </View>
         </View>
       </View>
@@ -151,8 +152,10 @@ const ConnectionsScreen = () => {
   if (isLoading) {
     return (
       <View style={globalStyles.containerCentered}>
-        <ActivityIndicator size="large" color="#22c55e" />
-        <Text style={globalStyles.subtitle}>Loading your running circle...</Text>
+        <ActivityIndicator size="large" color={colors.accent} />
+        <Text style={[globalStyles.subtitle, { marginTop: 16 }]}>
+          Loading your running circle…
+        </Text>
       </View>
     )
   }
@@ -165,9 +168,9 @@ const ConnectionsScreen = () => {
         </Text>
         <TouchableOpacity
           onPress={fetchConnections}
-          style={globalStyles.inlineButton}
+          style={[globalStyles.inlineButton, globalStyles.inlineButtonSelected]}
         >
-          <Text style={globalStyles.inlineButtonText}>Try again</Text>
+          <Text style={globalStyles.inlineButtonTextSelected}>Try again</Text>
         </TouchableOpacity>
       </View>
     )
@@ -176,10 +179,13 @@ const ConnectionsScreen = () => {
   if (!connections.length) {
     return (
       <View style={globalStyles.containerCentered}>
-        <Text style={globalStyles.title}>Your running circle</Text>
+        <View style={s.emptyIcon}>
+          <FontAwesome5 name="running" size={32} color={colors.accent} />
+        </View>
+        <Text style={globalStyles.title}>Your Running Circle</Text>
         <Text style={globalStyles.subtitle}>
-          When you plan a great run with someone, they'll show up here so it's
-          easy to head out together again.
+          Save runners you want to run with. They'll show up here for easy
+          access.
         </Text>
         <TouchableOpacity
           onPress={() => navigation.navigate('NearbyRunners')}
@@ -193,9 +199,14 @@ const ConnectionsScreen = () => {
     )
   }
 
+  const count = connections.length
+
   return (
-    <View style={globalStyles.container}>
-      <Text style={globalStyles.title}>Your running circle</Text>
+    <View style={[globalStyles.container, { paddingTop: insets.top + 20 }]}>
+      <Text style={globalStyles.title}>Your Running Circle</Text>
+      <Text style={globalStyles.subtitle}>
+        {count} saved {count === 1 ? 'runner' : 'runners'}
+      </Text>
       <FlatList
         data={connections}
         keyExtractor={item => item.id}
@@ -206,5 +217,108 @@ const ConnectionsScreen = () => {
     </View>
   )
 }
+
+const s = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 10,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  name: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    letterSpacing: -0.3,
+  },
+  neighborhood: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  savedBadge: {
+    backgroundColor: colors.elevated,
+    borderRadius: radii.full,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  savedBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.accent,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  chip: {
+    backgroundColor: colors.elevated,
+    borderRadius: radii.md,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    gap: 2,
+  },
+  chipLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textTertiary,
+    letterSpacing: 0.8,
+  },
+  chipValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  pillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.elevated,
+    borderRadius: radii.full,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    gap: 6,
+  },
+  pillLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textTertiary,
+    letterSpacing: 0.8,
+  },
+  pillValue: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textPrimary,
+  },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+})
 
 export default ConnectionsScreen

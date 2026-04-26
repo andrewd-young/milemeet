@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { TouchableOpacity } from 'react-native'
+import { StyleSheet, TouchableOpacity } from 'react-native'
 
 import { FontAwesome5 } from '@expo/vector-icons'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import type { MainTabParamList, RootStackParamList } from '../../types/navigation'
+import { colors } from '../theme'
 import ConnectionsScreen from '../screens/ConnectionsScreen'
 import NearbyRunnersScreen from '../screens/NearbyRunnersScreen'
 import ProfileScreen from '../screens/ProfileScreen'
@@ -18,20 +19,34 @@ const EditProfileButton = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
   return (
     <TouchableOpacity
-      style={{ padding: 8, marginRight: 8 }}
+      style={s.editButton}
       onPress={() => navigation.navigate('EditProfile')}
+      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
     >
-      <FontAwesome5 name="cog" size={20} color="#666" />
+      <FontAwesome5 name="pen" size={15} color={colors.textPrimary} />
     </TouchableOpacity>
   )
 }
+
+const s = StyleSheet.create({
+  editButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+})
 
 const MainTabNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#1fb28a',
-        tabBarInactiveTintColor: '#888',
+        tabBarActiveTintColor: '#C8F135',
+        tabBarInactiveTintColor: '#636366',
+        tabBarStyle: { backgroundColor: '#1C1C1E', borderTopColor: '#38383A' },
         headerShown: false,
       }}
     >
@@ -65,7 +80,10 @@ const MainTabNavigator = () => {
           ),
           headerShown: true,
           headerTitle: '',
+          headerStyle: { backgroundColor: '#0D0D0D' },
+          headerShadowVisible: false,
           headerRight: () => <EditProfileButton />,
+          headerRightContainerStyle: { paddingRight: 0 },
         }}
       />
     </Tab.Navigator>

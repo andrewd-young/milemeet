@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -16,8 +17,15 @@ import { supabase } from '../../lib/api/supabase'
 import type { RootStackParamList } from '../../types/navigation'
 import type { Tables } from '../../types/supabase'
 import { globalStyles } from '../styles'
+import { colors, radii } from '../theme'
 
 type Runner = Tables<'runners'>
+
+const CONNECTED_APPS = [
+  { key: 'strava' as const, icon: 'strava', label: 'Strava', activeColor: colors.strava },
+  { key: 'instagram' as const, icon: 'instagram', label: 'Instagram', activeColor: colors.accent },
+  { key: 'linkedin' as const, icon: 'linkedin', label: 'LinkedIn', activeColor: colors.accent },
+]
 
 const ProfileScreen = () => {
   const navigation =
@@ -36,7 +44,6 @@ const ProfileScreen = () => {
     try {
       const { data: authData } = await supabase.auth.getUser()
       const userId = authData.user?.id ?? null
-
       let data: Runner | null = null
 
       if (userId) {
@@ -45,7 +52,6 @@ const ProfileScreen = () => {
           .select('*')
           .eq('user_id', userId)
           .maybeSingle()
-
         if (byUserError) throw byUserError
         data = byUser
       }
@@ -57,7 +63,6 @@ const ProfileScreen = () => {
           .order('inserted_at', { ascending: false })
           .limit(1)
           .maybeSingle()
-
         if (fallbackError) throw fallbackError
         data = fallback
       }
@@ -65,44 +70,27 @@ const ProfileScreen = () => {
       setRunner(data)
     } catch (error) {
       setErrorMessage(
-        `Failed to load profile: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to load profile: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
       )
-      setRunner(null)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const formatPace = (pace: number): string => {
-    const minutes = Math.floor(pace)
-    const seconds = Math.round((pace - minutes) * 60)
-    return `${minutes}:${seconds.toString().padStart(2, '0')}/mi`
-  }
-
-  const formatDistanceRange = (min: number, max: number): string => {
-    return `${min} - ${max} miles`
-  }
-
-  const formatRunDaysAndTimes = (
-    days: string[] | null,
-    times: string[] | null,
-  ): string => {
-    const daysStr = days && days.length > 0 ? days.join(', ') : 'Not set'
-    const timesStr = times && times.length > 0 ? times.join(', ') : 'Not set'
-    return `${daysStr} at ${timesStr}`
-  }
-
-  const formatArrayField = (arr: string[] | null): string => {
-    if (!arr || arr.length === 0) return 'Not set'
-    return arr.join(', ')
+  const formatPace = (pace: number) => {
+    const m = Math.floor(pace)
+    const sec = Math.round((pace - m) * 60)
+    return `${m}:${sec.toString().padStart(2, '0')}/mi`
   }
 
   if (isLoading) {
     return (
       <View style={globalStyles.containerCentered}>
-        <ActivityIndicator size="large" color="#1fb28a" />
+        <ActivityIndicator size="large" color={colors.accent} />
         <Text style={[globalStyles.subtitle, { marginTop: 16 }]}>
-          Loading profile...
+          Loading profile…
         </Text>
       </View>
     )
@@ -111,7 +99,7 @@ const ProfileScreen = () => {
   if (errorMessage) {
     return (
       <View style={globalStyles.containerCentered}>
-        <Text style={[globalStyles.subtitle, { color: '#ff0000' }]}>
+        <Text style={[globalStyles.subtitle, { color: colors.error }]}>
           {errorMessage}
         </Text>
       </View>
@@ -121,7 +109,7 @@ const ProfileScreen = () => {
   if (!runner) {
     return (
       <View style={globalStyles.containerCentered}>
-        <Text style={globalStyles.subtitle}>No runner found.</Text>
+        <Text style={globalStyles.subtitle}>No profile found.</Text>
       </View>
     )
   }
@@ -129,207 +117,312 @@ const ProfileScreen = () => {
   return (
     <ScrollView
       style={globalStyles.container}
-      contentContainerStyle={{ paddingBottom: 24 }}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      showsVerticalScrollIndicator={false}
     >
-      {/* Profile Image & Name */}
-      <View style={globalStyles.profileHeader}>
-        <View style={globalStyles.profileImageContainer}>
-          <FontAwesome5 name="user-circle" size={70} color="#1fb28a" />
+      {/* Header */}
+      <View style={s.header}>
+        <View style={s.avatarLg}>
+          <FontAwesome5 name="user-circle" size={52} color={colors.accent} />
         </View>
-        <TouchableOpacity>
-          <Text style={globalStyles.profileName}>{runner.name}</Text>
-        </TouchableOpacity>
+        <Text style={s.profileName}>{runner.name}</Text>
+        {runner.neighborhood ? (
+          <View style={s.locationRow}>
+            <FontAwesome5
+              name="map-marker-alt"
+              size={12}
+              color={colors.textSecondary}
+            />
+            <Text style={s.locationText}>{runner.neighborhood}</Text>
+          </View>
+        ) : null}
       </View>
 
-      {/* About Me Section */}
-      <View style={globalStyles.sectionBox}>
-        <Text style={globalStyles.sectionTitle}>About Me</Text>
-        <ProfileFieldRow
-          icon="user"
-          label="Bio"
-          value={runner.bio || 'Not set'}
-          isEmpty={!runner.bio}
-        />
+      {/* Stats */}
+      <View style={s.statsRow}>
+        <View style={s.statBlock}>
+          <Text style={s.statLabel}>PACE</Text>
+          <Text style={s.statValue}>{formatPace(runner.pace)}</Text>
+        </View>
+        <View style={s.statDivider} />
+        <View style={s.statBlock}>
+          <Text style={s.statLabel}>DISTANCE</Text>
+          <Text style={s.statValue}>
+            {runner.distance_min}–{runner.distance_max} mi
+          </Text>
+        </View>
       </View>
 
-      {/* Running Details Section */}
-      <View style={globalStyles.sectionBox}>
-        <Text style={globalStyles.sectionTitle}>Running Details</Text>
-        <ProfileFieldRow
-          icon="tachometer-alt"
-          label="Preferred Pace"
-          value={formatPace(runner.pace)}
-        />
-        <ProfileFieldRow
-          icon="ruler"
-          label="Distance Range"
-          value={formatDistanceRange(runner.distance_min, runner.distance_max)}
-        />
-        <ProfileFieldRow
-          icon="calendar-alt"
-          label="Run Days & Times"
-          value={formatRunDaysAndTimes(runner.run_days, runner.run_times)}
-        />
-        <ProfileFieldRow
-          icon="map-marker-alt"
-          label="Neighborhoods"
-          value={formatArrayField(runner.run_neighborhoods)}
-          isEmpty={
-            !runner.run_neighborhoods || runner.run_neighborhoods.length === 0
-          }
-          isLast
-        />
-      </View>
+      {/* About */}
+      {runner.bio ? (
+        <View style={s.section}>
+          <Text style={s.sectionLabel}>ABOUT</Text>
+          <Text style={s.bioText}>{runner.bio}</Text>
+        </View>
+      ) : null}
 
-      {/* Achievements & Clubs Section */}
-      <View style={globalStyles.sectionBox}>
-        <Text style={globalStyles.sectionTitle}>Achievements & Clubs</Text>
-        <ProfileFieldRow
-          icon="flag"
-          label="Goals"
-          value={runner.goals || 'Not set'}
-          isEmpty={!runner.goals}
-        />
-        <ProfileFieldRow
-          icon="medal"
-          label="Past Races"
-          value={formatArrayField(runner.past_races)}
-          isEmpty={!runner.past_races || runner.past_races.length === 0}
-        />
-        <ProfileFieldRow
-          icon="running"
-          label="Run Clubs"
-          value={formatArrayField(runner.run_clubs)}
-          isEmpty={!runner.run_clubs || runner.run_clubs.length === 0}
-          isLast
-        />
-      </View>
+      {/* Schedule */}
+      {runner.run_days?.length || runner.run_times?.length ? (
+        <View style={s.section}>
+          <Text style={s.sectionLabel}>SCHEDULE</Text>
+          {runner.run_days?.length ? (
+            <View style={s.chipsWrap}>
+              {runner.run_days.map(day => (
+                <View key={day} style={s.dayChip}>
+                  <Text style={s.dayChipText}>{day}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+          {runner.run_times?.length ? (
+            <View style={[s.chipsWrap, { marginTop: 6 }]}>
+              {runner.run_times.map(time => (
+                <View key={time} style={s.timeChip}>
+                  <Text style={s.timeChipText}>{time}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
 
-      {/* Connected Apps Section */}
-      <View style={globalStyles.sectionBox}>
-        <Text style={globalStyles.sectionTitle}>Connected Apps</Text>
-        <AppConnectionRow
-          appName="Strava"
-          icon="running"
-          connected={!!runner.strava}
-          username={runner.strava}
-        />
-        <AppConnectionRow
-          appName="Instagram"
-          icon="instagram"
-          connected={!!runner.instagram}
-          username={runner.instagram}
-        />
-        <AppConnectionRow
-          appName="LinkedIn"
-          icon="linkedin"
-          connected={!!runner.linkedin}
-          username={runner.linkedin}
-          isLast
-        />
+      {/* Goals */}
+      {runner.goals ? (
+        <View style={s.section}>
+          <Text style={s.sectionLabel}>GOALS</Text>
+          <Text style={s.bodyText}>{runner.goals}</Text>
+        </View>
+      ) : null}
+
+      {/* Races & Clubs */}
+      {runner.past_races?.length || runner.run_clubs?.length ? (
+        <View style={s.section}>
+          <Text style={s.sectionLabel}>RACES & CLUBS</Text>
+          {runner.past_races?.length ? (
+            <View style={s.chipsWrap}>
+              {runner.past_races.map(race => (
+                <View key={race} style={s.tagChip}>
+                  <Text style={s.tagChipText}>{race}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+          {runner.run_clubs?.length ? (
+            <View style={[s.chipsWrap, { marginTop: 6 }]}>
+              {runner.run_clubs.map(club => (
+                <View key={club} style={s.tagChip}>
+                  <Text style={s.tagChipText}>{club}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
+      {/* Connected Apps */}
+      <View style={s.section}>
+        <Text style={s.sectionLabel}>CONNECTED APPS</Text>
+        {CONNECTED_APPS.map((app, i) => {
+          const value = runner[app.key]
+          const isLast = i === CONNECTED_APPS.length - 1
+          return (
+            <View key={app.key} style={[s.appRow, isLast && s.appRowLast]}>
+              <FontAwesome5
+                name={app.icon as any}
+                size={16}
+                color={value ? app.activeColor : colors.textTertiary}
+                style={{ width: 20 }}
+              />
+              <Text
+                style={[
+                  s.appRowLabel,
+                  !value && { color: colors.textTertiary },
+                ]}
+              >
+                {app.label}
+              </Text>
+              <Text style={s.appRowValue}>{value ?? 'Not connected'}</Text>
+            </View>
+          )
+        })}
       </View>
 
       {__DEV__ && (
         <TouchableOpacity
           onPress={() => navigation.navigate('OnboardingName')}
-          style={{
-            margin: 24,
-            padding: 14,
-            borderRadius: 10,
-            borderWidth: 1,
-            borderColor: '#555',
-            alignItems: 'center',
-          }}
+          style={s.devButton}
         >
-          <Text style={{ color: '#888', fontSize: 13 }}>
-            DEV — Restart onboarding
-          </Text>
+          <Text style={s.devButtonText}>DEV — Restart onboarding</Text>
         </TouchableOpacity>
       )}
     </ScrollView>
   )
 }
 
-type ProfileFieldRowProps = {
-  icon: string
-  label: string
-  value: string
-  isEmpty?: boolean
-  isLast?: boolean
-}
-
-const ProfileFieldRow = ({
-  icon,
-  label,
-  value,
-  isEmpty = false,
-  isLast = false,
-}: ProfileFieldRowProps) => {
-  return (
-    <TouchableOpacity
-      style={[
-        globalStyles.profileFieldRow,
-        isLast && globalStyles.profileFieldRowLast,
-      ]}
-    >
-      <FontAwesome5
-        name={icon as any}
-        size={20}
-        color="#666"
-        style={globalStyles.profileFieldIcon}
-      />
-      <View style={globalStyles.profileFieldContent}>
-        <Text style={globalStyles.profileFieldLabel}>{label}</Text>
-        <Text
-          style={
-            isEmpty
-              ? globalStyles.profileFieldValueEmpty
-              : globalStyles.profileFieldValue
-          }
-        >
-          {value}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  )
-}
-
-type AppConnectionRowProps = {
-  appName: string
-  icon: string
-  connected: boolean
-  username: string | null
-  isLast?: boolean
-}
-
-const AppConnectionRow = ({
-  appName,
-  icon,
-  connected,
-  username,
-  isLast = false,
-}: AppConnectionRowProps) => {
-  return (
-    <TouchableOpacity
-      style={[
-        globalStyles.appConnectionRow,
-        isLast && globalStyles.appConnectionRowLast,
-      ]}
-    >
-      <View style={globalStyles.appConnectionInfo}>
-        <FontAwesome5 name={icon as any} size={20} color="#666" />
-        <View>
-          <Text style={globalStyles.appConnectionName}>{appName}</Text>
-          {connected && username && (
-            <Text style={globalStyles.appConnectionStatus}>{username}</Text>
-          )}
-        </View>
-      </View>
-      <Text style={globalStyles.appConnectionStatus}>
-        {connected ? 'Connected' : 'Not connected'}
-      </Text>
-    </TouchableOpacity>
-  )
-}
+const s = StyleSheet.create({
+  header: {
+    alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 20,
+    gap: 8,
+  },
+  avatarLg: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  profileName: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+    textAlign: 'center',
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  locationText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  statBlock: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 16,
+    gap: 4,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textTertiary,
+    letterSpacing: 0.8,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.accent,
+    letterSpacing: -0.3,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: colors.border,
+    marginVertical: 12,
+  },
+  section: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    marginBottom: 12,
+    gap: 10,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textTertiary,
+    letterSpacing: 1,
+  },
+  bioText: {
+    fontSize: 15,
+    color: colors.textPrimary,
+    lineHeight: 22,
+  },
+  bodyText: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    lineHeight: 22,
+  },
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  dayChip: {
+    backgroundColor: colors.elevated,
+    borderRadius: radii.full,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+  },
+  dayChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  timeChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.full,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+  },
+  timeChipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  tagChip: {
+    backgroundColor: colors.elevated,
+    borderRadius: radii.md,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  tagChipText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  appRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    gap: 12,
+  },
+  appRowLast: {
+    borderBottomWidth: 0,
+    paddingBottom: 0,
+  },
+  appRowLabel: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.textPrimary,
+  },
+  appRowValue: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  devButton: {
+    marginTop: 8,
+    padding: 14,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  devButtonText: {
+    color: colors.textTertiary,
+    fontSize: 13,
+  },
+})
 
 export default ProfileScreen
