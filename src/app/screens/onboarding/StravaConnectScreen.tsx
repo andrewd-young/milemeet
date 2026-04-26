@@ -1,15 +1,14 @@
 import React, { useState } from 'react'
-
-import { ActivityIndicator, Button, Text, View } from 'react-native'
-
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-
+import { FontAwesome5 } from '@expo/vector-icons'
 import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
-import { globalStyles } from '../../styles'
+import OnboardingLayout from '../../../components/OnboardingLayout'
+import { colors, radii } from '../../theme'
 
-const StravaConnectScreen = () => {
+export default function StravaConnectScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
   const { completeOnboarding } = useOnboarding()
   const [isSaving, setIsSaving] = useState(false)
@@ -20,38 +19,100 @@ const StravaConnectScreen = () => {
       setIsSaving(true)
       setErrorMessage(null)
       await completeOnboarding()
-      navigation.navigate({
-        name: 'MainTabs',
-        params: { screen: 'NearbyRunners' },
-      })
+      navigation.navigate({ name: 'MainTabs', params: { screen: 'NearbyRunners' } })
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Something went wrong',
-      )
+      console.error('[StravaConnectScreen] completeOnboarding threw:', error)
+      const msg =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'object' && error !== null && 'message' in error
+            ? String((error as { message: unknown }).message)
+            : JSON.stringify(error)
+      setErrorMessage(msg)
     } finally {
       setIsSaving(false)
     }
   }
 
   return (
-    <View style={globalStyles.containerCentered}>
-      <Text style={globalStyles.title}>Connect your running apps (optional)</Text>
-      <Text style={globalStyles.subtitle}>
-        Strava and other integrations are coming soon. For now, we’ll just save
-        your running preferences.
-      </Text>
-      {errorMessage && (
-        <Text style={[globalStyles.subtitle, { color: '#ef4444' }]}>
-          {errorMessage}
-        </Text>
-      )}
-      {isSaving ? (
-        <ActivityIndicator size="large" color="#22c55e" />
-      ) : (
-        <Button title="Continue to runners 🏃‍♀️" onPress={handleContinue} />
-      )}
-    </View>
+    <OnboardingLayout
+      step={7}
+      title="Almost there"
+      subtitle="Connect Strava to auto-fill your pace, or continue and set it manually."
+      onNext={handleContinue}
+      nextLabel="Find My Runners"
+      isLoading={isSaving}
+    >
+      <TouchableOpacity style={styles.stravaCard} activeOpacity={0.75}>
+        <View style={styles.stravaIconWrap}>
+          <FontAwesome5 name="strava" size={22} color={colors.strava} />
+        </View>
+        <View style={styles.stravaText}>
+          <Text style={styles.stravaTitle}>Connect Strava</Text>
+          <Text style={styles.stravaDesc}>
+            We'll analyze your past runs to set your default pace.
+          </Text>
+        </View>
+        <View style={styles.connectBadge}>
+          <Text style={styles.connectBadgeText}>Connect</Text>
+        </View>
+      </TouchableOpacity>
+
+      {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+    </OnboardingLayout>
   )
 }
 
-export default StravaConnectScreen
+const styles = StyleSheet.create({
+  stravaCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 12,
+  },
+  stravaIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#2A1208',
+    borderWidth: 1,
+    borderColor: '#5C2510',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stravaText: {
+    flex: 1,
+    gap: 2,
+  },
+  stravaTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  stravaDesc: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    lineHeight: 16,
+  },
+  connectBadge: {
+    backgroundColor: colors.elevated,
+    borderRadius: radii.full,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+  },
+  connectBadgeText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  error: {
+    fontSize: 13,
+    color: colors.error,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+})

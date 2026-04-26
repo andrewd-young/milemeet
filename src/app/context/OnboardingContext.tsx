@@ -124,15 +124,18 @@ export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
           .eq('id', existing.id)
 
         if (error) {
-          throw error
+          console.error('[completeOnboarding] update error:', error)
+          throw new Error(error.message ?? 'Failed to update profile')
         }
         return
       }
     }
 
+    console.log('[completeOnboarding] inserting payload:', JSON.stringify(payload, null, 2))
     const { error } = await supabase.from('runners').insert(payload)
     if (error) {
-      throw error
+      console.error('[completeOnboarding] insert error:', error)
+      throw new Error(error.message ?? 'Failed to save profile')
     }
   }, [data])
 

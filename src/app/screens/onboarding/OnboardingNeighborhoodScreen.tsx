@@ -1,21 +1,17 @@
 import React, { useState } from 'react'
-
-import { Button, Text, TextInput, View } from 'react-native'
-
+import { StyleSheet, TextInput } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-
 import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
-import { globalStyles } from '../../styles'
+import OnboardingLayout from '../../../components/OnboardingLayout'
+import { colors, radii } from '../../theme'
 
-const OnboardingNeighborhoodScreen = () => {
+export default function OnboardingNeighborhoodScreen() {
   const [neighborhood, setNeighborhood] = useState('')
-  const { setNeighborhood: setOnboardingNeighborhood } = useOnboarding()
   const navigation =
-    useNavigation<
-      NativeStackNavigationProp<RootStackParamList, 'OnboardingNeighborhood'>
-    >()
+    useNavigation<NativeStackNavigationProp<RootStackParamList, 'OnboardingNeighborhood'>>()
+  const { setNeighborhood: setOnboardingNeighborhood } = useOnboarding()
 
   const handleNext = () => {
     const trimmed = neighborhood.trim()
@@ -25,17 +21,39 @@ const OnboardingNeighborhoodScreen = () => {
   }
 
   return (
-    <View style={globalStyles.containerCentered}>
-      <Text style={globalStyles.title}>Where do you usually start runs? 🏙️</Text>
+    <OnboardingLayout
+      step={3}
+      title="Where do you usually run?"
+      subtitle="We'll find pace partners close to your neighborhood."
+      onNext={handleNext}
+      nextDisabled={!neighborhood.trim()}
+    >
       <TextInput
-        style={globalStyles.input}
-        placeholder="Neighborhood"
+        style={styles.input}
         value={neighborhood}
         onChangeText={setNeighborhood}
+        placeholder="e.g. Brooklyn Heights"
+        placeholderTextColor={colors.textTertiary}
+        keyboardAppearance="dark"
+        selectionColor={colors.accent}
+        autoFocus
+        autoCapitalize="words"
+        returnKeyType="done"
+        onSubmitEditing={handleNext}
       />
-      <Button title="Next" onPress={handleNext} disabled={!neighborhood.trim()} />
-    </View>
+    </OnboardingLayout>
   )
 }
 
-export default OnboardingNeighborhoodScreen
+const styles = StyleSheet.create({
+  input: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    height: 54,
+    paddingHorizontal: 18,
+    fontSize: 18,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+})
