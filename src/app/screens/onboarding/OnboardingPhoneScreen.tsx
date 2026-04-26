@@ -1,10 +1,18 @@
 import React, { useState } from 'react'
-import { StyleSheet, TextInput } from 'react-native'
+
+import {
+  InputAccessoryView,
+  Platform,
+  StyleSheet,
+  TextInput,
+} from 'react-native'
+
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+
+import OnboardingLayout from '../../../components/OnboardingLayout'
 import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
-import OnboardingLayout from '../../../components/OnboardingLayout'
 import { colors, radii } from '../../theme'
 
 const isValidPhone = (phone: string): boolean => {
@@ -12,40 +20,45 @@ const isValidPhone = (phone: string): boolean => {
   return digits.length >= 7 && digits.length <= 15
 }
 
+const INPUT_ID = 'phone-input'
+
 export default function OnboardingPhoneScreen() {
   const [phone, setPhone] = useState('')
   const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList, 'OnboardingPhone'>>()
+    useNavigation<
+      NativeStackNavigationProp<RootStackParamList, 'OnboardingPhone'>
+    >()
   const { setPhone: setOnboardingPhone } = useOnboarding()
 
   const handleNext = () => {
     setOnboardingPhone(phone.trim(), 'US')
-    navigation.navigate('OnboardingName')
+    navigation.navigate('OnboardingNeighborhood')
   }
 
   return (
-    <OnboardingLayout
-      step={1}
-      title="What's your phone number?"
-      subtitle="We'll use this to reconnect you to your running circle."
-      onNext={handleNext}
-      nextDisabled={!isValidPhone(phone)}
-      showBack={false}
-    >
-      <TextInput
-        style={styles.input}
-        value={phone}
-        onChangeText={setPhone}
-        placeholder="+1 (555) 000-0000"
-        placeholderTextColor={colors.textTertiary}
-        keyboardType="numbers-and-punctuation"
-        keyboardAppearance="dark"
-        selectionColor={colors.accent}
-        autoFocus
-        returnKeyType="done"
-        onSubmitEditing={handleNext}
-      />
-    </OnboardingLayout>
+    <>
+      <OnboardingLayout
+        step={3}
+        title="What's your phone number?"
+        subtitle="So your running circle can reach you."
+        onNext={handleNext}
+        nextDisabled={!isValidPhone(phone)}
+      >
+        <TextInput
+          style={styles.input}
+          value={phone}
+          onChangeText={setPhone}
+          placeholder="+1 (555) 000-0000"
+          placeholderTextColor={colors.textTertiary}
+          keyboardType="phone-pad"
+          keyboardAppearance="dark"
+          selectionColor={colors.accent}
+          inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ID : undefined}
+          autoFocus
+        />
+      </OnboardingLayout>
+      {Platform.OS === 'ios' && <InputAccessoryView nativeID={INPUT_ID} />}
+    </>
   )
 }
 

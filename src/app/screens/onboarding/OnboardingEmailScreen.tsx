@@ -6,43 +6,56 @@ import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import OnboardingLayout from '../../../components/OnboardingLayout'
+import { supabase } from '../../../lib/api/supabase'
 import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
 import { colors, radii } from '../../theme'
 
-export default function OnboardingNameScreen() {
-  const [name, setName] = useState('')
+const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+
+export default function OnboardingEmailScreen() {
+  const [email, setEmail] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const navigation =
     useNavigation<
-      NativeStackNavigationProp<RootStackParamList, 'OnboardingName'>
+      NativeStackNavigationProp<RootStackParamList, 'OnboardingEmail'>
     >()
-  const { setName: setOnboardingName } = useOnboarding()
+  const { setEmail: setOnboardingEmail } = useOnboarding()
 
-  const handleNext = () => {
-    const trimmed = name.trim()
-    if (!trimmed) return
-    setOnboardingName(trimmed)
-    navigation.navigate('OnboardingPhone')
+  const handleNext = async () => {
+    const trimmed = email.trim().toLowerCase()
+    setIsLoading(true)
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ email: trimmed })
+      if (error) throw error
+      setOnboardingEmail(trimmed)
+      navigation.navigate('OnboardingVerify')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
     <OnboardingLayout
-      step={2}
-      title="What should we call you?"
-      subtitle="This is how other runners will see you."
+      step={1}
+      title="What's your email?"
+      subtitle="We'll send you a verification code to get started."
       onNext={handleNext}
-      nextDisabled={!name.trim()}
+      nextDisabled={!isValidEmail(email.trim())}
+      isLoading={isLoading}
+      showBack={false}
     >
       <TextInput
         style={styles.input}
-        value={name}
-        onChangeText={setName}
-        placeholder="Your name"
+        value={email}
+        onChangeText={setEmail}
+        placeholder="you@example.com"
         placeholderTextColor={colors.textTertiary}
+        keyboardType="email-address"
         keyboardAppearance="dark"
         selectionColor={colors.accent}
         autoFocus
-        autoCapitalize="words"
+        autoCapitalize="none"
         autoCorrect={false}
         returnKeyType="done"
         onSubmitEditing={handleNext}

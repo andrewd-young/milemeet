@@ -1,6 +1,8 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
+
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -9,9 +11,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useNavigation } from '@react-navigation/native'
+
 import { Ionicons } from '@expo/vector-icons'
+import { useNavigation } from '@react-navigation/native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
 import { colors, radii } from '../app/theme'
 
 interface Props {
@@ -29,7 +33,7 @@ interface Props {
 
 export default function OnboardingLayout({
   step,
-  totalSteps = 7,
+  totalSteps = 8,
   title,
   subtitle,
   onNext,
@@ -41,12 +45,28 @@ export default function OnboardingLayout({
 }: Props) {
   const insets = useSafeAreaInsets()
   const navigation = useNavigation()
+  const [keyboardVisible, setKeyboardVisible] = useState(false)
+
+  useEffect(() => {
+    const show = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true),
+    )
+    const hide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false),
+    )
+    return () => {
+      show.remove()
+      hide.remove()
+    }
+  }, [])
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'height' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Fixed header — never scrolls */}
         <View style={styles.header}>
@@ -57,7 +77,11 @@ export default function OnboardingLayout({
                 style={styles.backButton}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
+                <Ionicons
+                  name="chevron-back"
+                  size={20}
+                  color={colors.textPrimary}
+                />
               </TouchableOpacity>
             ) : (
               <View style={styles.navSpacer} />
@@ -70,7 +94,10 @@ export default function OnboardingLayout({
 
           <View style={styles.progressTrack}>
             <View
-              style={[styles.progressFill, { width: `${(step / totalSteps) * 100}%` }]}
+              style={[
+                styles.progressFill,
+                { width: `${(step / totalSteps) * 100}%` },
+              ]}
             />
           </View>
 
@@ -90,7 +117,12 @@ export default function OnboardingLayout({
         </ScrollView>
 
         {/* Fixed CTA — sits just above keyboard */}
-        <View style={[styles.footer, { paddingBottom: insets.bottom + 8 }]}>
+        <View
+          style={[
+            styles.footer,
+            { paddingBottom: keyboardVisible ? 16 : insets.bottom + 8 },
+          ]}
+        >
           <TouchableOpacity
             style={[styles.cta, nextDisabled && styles.ctaDisabled]}
             onPress={onNext}
@@ -100,7 +132,9 @@ export default function OnboardingLayout({
             {isLoading ? (
               <ActivityIndicator color={colors.textSecondary} />
             ) : (
-              <Text style={[styles.ctaText, nextDisabled && styles.ctaTextDisabled]}>
+              <Text
+                style={[styles.ctaText, nextDisabled && styles.ctaTextDisabled]}
+              >
                 {nextLabel}
               </Text>
             )}

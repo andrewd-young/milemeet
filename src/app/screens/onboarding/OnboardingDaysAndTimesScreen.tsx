@@ -1,11 +1,14 @@
 import React, { useState } from 'react'
+
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+
+import { Ionicons } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { Ionicons } from '@expo/vector-icons'
+
+import OnboardingLayout from '../../../components/OnboardingLayout'
 import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
-import OnboardingLayout from '../../../components/OnboardingLayout'
 import { colors, radii } from '../../theme'
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name']
@@ -26,7 +29,9 @@ export default function OnboardingDaysAndTimesScreen() {
   const [selectedDays, setSelectedDays] = useState<string[]>([])
   const [selectedTimes, setSelectedTimes] = useState<string[]>([])
   const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList, 'OnboardingDaysAndTimes'>>()
+    useNavigation<
+      NativeStackNavigationProp<RootStackParamList, 'OnboardingDaysAndTimes'>
+    >()
   const { setRunSchedule } = useOnboarding()
 
   const handleNext = () => {
@@ -37,7 +42,7 @@ export default function OnboardingDaysAndTimesScreen() {
 
   return (
     <OnboardingLayout
-      step={5}
+      step={6}
       title="When do you run?"
       subtitle="Select the days and times you're usually available."
       onNext={handleNext}
@@ -54,7 +59,12 @@ export default function OnboardingDaysAndTimesScreen() {
               onPress={() => setSelectedDays(toggle(day, selectedDays))}
               activeOpacity={0.7}
             >
-              <Text style={[styles.dayChipText, selected && styles.dayChipTextSelected]}>
+              <Text
+                style={[
+                  styles.dayChipText,
+                  selected && styles.dayChipTextSelected,
+                ]}
+              >
                 {day[0]}
               </Text>
             </TouchableOpacity>
@@ -78,7 +88,12 @@ export default function OnboardingDaysAndTimesScreen() {
                 size={16}
                 color={selected ? colors.bg : colors.textSecondary}
               />
-              <Text style={[styles.timeChipText, selected && styles.timeChipTextSelected]}>
+              <Text
+                style={[
+                  styles.timeChipText,
+                  selected && styles.timeChipTextSelected,
+                ]}
+              >
                 {label}
               </Text>
             </TouchableOpacity>

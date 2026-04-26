@@ -9,14 +9,19 @@ import {
 } from 'react-native'
 
 import { FontAwesome5 } from '@expo/vector-icons'
+import { useNavigation } from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import { supabase } from '../../lib/api/supabase'
+import type { RootStackParamList } from '../../types/navigation'
 import type { Tables } from '../../types/supabase'
 import { globalStyles } from '../styles'
 
 type Runner = Tables<'runners'>
 
 const ProfileScreen = () => {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>()
   const [runner, setRunner] = useState<Runner | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -223,6 +228,24 @@ const ProfileScreen = () => {
           isLast
         />
       </View>
+
+      {__DEV__ && (
+        <TouchableOpacity
+          onPress={() => navigation.navigate('OnboardingName')}
+          style={{
+            margin: 24,
+            padding: 14,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: '#555',
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ color: '#888', fontSize: 13 }}>
+            DEV — Restart onboarding
+          </Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   )
 }

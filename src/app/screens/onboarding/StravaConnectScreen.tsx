@@ -1,15 +1,19 @@
 import React, { useState } from 'react'
+
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+
+import { FontAwesome5 } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { FontAwesome5 } from '@expo/vector-icons'
+
+import OnboardingLayout from '../../../components/OnboardingLayout'
 import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
-import OnboardingLayout from '../../../components/OnboardingLayout'
 import { colors, radii } from '../../theme'
 
 export default function StravaConnectScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>()
   const { completeOnboarding } = useOnboarding()
   const [isSaving, setIsSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -19,7 +23,10 @@ export default function StravaConnectScreen() {
       setIsSaving(true)
       setErrorMessage(null)
       await completeOnboarding()
-      navigation.navigate({ name: 'MainTabs', params: { screen: 'NearbyRunners' } })
+      navigation.navigate({
+        name: 'MainTabs',
+        params: { screen: 'NearbyRunners' },
+      })
     } catch (error) {
       console.error('[StravaConnectScreen] completeOnboarding threw:', error)
       const msg =
@@ -36,7 +43,7 @@ export default function StravaConnectScreen() {
 
   return (
     <OnboardingLayout
-      step={7}
+      step={8}
       title="Almost there"
       subtitle="Connect Strava to auto-fill your pace, or continue and set it manually."
       onNext={handleContinue}

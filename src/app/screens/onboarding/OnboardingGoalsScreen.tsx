@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+
 import {
   StyleSheet,
   Text,
@@ -6,12 +7,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
+
+import { Ionicons } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { Ionicons } from '@expo/vector-icons'
+
+import OnboardingLayout from '../../../components/OnboardingLayout'
 import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
-import OnboardingLayout from '../../../components/OnboardingLayout'
 import { colors, radii } from '../../theme'
 
 const PRESET_GOALS = [
@@ -32,7 +35,9 @@ export default function OnboardingGoalsScreen() {
   const [customInput, setCustomInput] = useState('')
   const [customGoals, setCustomGoals] = useState<string[]>([])
   const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList, 'OnboardingGoals'>>()
+    useNavigation<
+      NativeStackNavigationProp<RootStackParamList, 'OnboardingGoals'>
+    >()
   const { setGoals } = useOnboarding()
 
   const togglePreset = (goal: string) => {
@@ -43,7 +48,11 @@ export default function OnboardingGoalsScreen() {
 
   const addCustomGoal = () => {
     const trimmed = customInput.trim()
-    if (trimmed && !customGoals.includes(trimmed) && !selectedPresets.includes(trimmed)) {
+    if (
+      trimmed &&
+      !customGoals.includes(trimmed) &&
+      !selectedPresets.includes(trimmed)
+    ) {
       setCustomGoals(prev => [...prev, trimmed])
     }
     setCustomInput('')
@@ -65,7 +74,7 @@ export default function OnboardingGoalsScreen() {
 
   return (
     <OnboardingLayout
-      step={6}
+      step={7}
       title="What are your goals?"
       subtitle="Optional — helps match you with runners who share your ambitions."
       onNext={handleNext}
@@ -81,7 +90,12 @@ export default function OnboardingGoalsScreen() {
               onPress={() => togglePreset(goal)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.presetChipText, selected && styles.presetChipTextSelected]}>
+              <Text
+                style={[
+                  styles.presetChipText,
+                  selected && styles.presetChipTextSelected,
+                ]}
+              >
                 {goal}
               </Text>
             </TouchableOpacity>

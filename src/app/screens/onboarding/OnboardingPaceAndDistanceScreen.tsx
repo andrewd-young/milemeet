@@ -1,11 +1,14 @@
 import React, { useState } from 'react'
+
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+
+import { Ionicons } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { Ionicons } from '@expo/vector-icons'
+
+import OnboardingLayout from '../../../components/OnboardingLayout'
 import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
-import OnboardingLayout from '../../../components/OnboardingLayout'
 import { colors, radii } from '../../theme'
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name']
@@ -19,9 +22,24 @@ interface PaceOption {
 
 const PACE_OPTIONS: PaceOption[] = [
   { label: 'Under 7:00', sublabel: 'Elite · Fast', icon: 'flash', value: 6.5 },
-  { label: '7:00 – 8:30', sublabel: 'Tempo · Steady', icon: 'timer-outline', value: 7.75 },
-  { label: '8:30 – 10:00', sublabel: 'Conversational · Relaxed', icon: 'walk-outline', value: 9.25 },
-  { label: '10:00+', sublabel: 'Jog · Run-Walk', icon: 'accessibility-outline', value: 11 },
+  {
+    label: '7:00 – 8:30',
+    sublabel: 'Tempo · Steady',
+    icon: 'timer-outline',
+    value: 7.75,
+  },
+  {
+    label: '8:30 – 10:00',
+    sublabel: 'Conversational · Relaxed',
+    icon: 'walk-outline',
+    value: 9.25,
+  },
+  {
+    label: '10:00+',
+    sublabel: 'Jog · Run-Walk',
+    icon: 'accessibility-outline',
+    value: 11,
+  },
 ]
 
 export default function OnboardingPaceAndDistanceScreen() {
@@ -29,7 +47,9 @@ export default function OnboardingPaceAndDistanceScreen() {
   const [distanceMin, setDistanceMin] = useState(3)
   const [distanceMax, setDistanceMax] = useState(6)
   const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList, 'OnboardingPaceAndDistance'>>()
+    useNavigation<
+      NativeStackNavigationProp<RootStackParamList, 'OnboardingPaceAndDistance'>
+    >()
   const { setPaceAndDistance } = useOnboarding()
 
   const handleNext = () => {
@@ -40,7 +60,7 @@ export default function OnboardingPaceAndDistanceScreen() {
 
   return (
     <OnboardingLayout
-      step={4}
+      step={5}
       title="What's your typical pace?"
       subtitle="Select your average comfortable running pace per mile."
       onNext={handleNext}
@@ -56,7 +76,12 @@ export default function OnboardingPaceAndDistanceScreen() {
               onPress={() => setSelectedPace(option.value)}
               activeOpacity={0.7}
             >
-              <View style={[styles.paceIconWrap, selected && styles.paceIconWrapSelected]}>
+              <View
+                style={[
+                  styles.paceIconWrap,
+                  selected && styles.paceIconWrapSelected,
+                ]}
+              >
                 <Ionicons
                   name={option.icon}
                   size={18}
@@ -64,7 +89,12 @@ export default function OnboardingPaceAndDistanceScreen() {
                 />
               </View>
               <View style={styles.paceText}>
-                <Text style={[styles.paceLabel, selected && styles.paceLabelSelected]}>
+                <Text
+                  style={[
+                    styles.paceLabel,
+                    selected && styles.paceLabelSelected,
+                  ]}
+                >
                   {option.label}
                 </Text>
                 <Text style={styles.paceSublabel}>{option.sublabel}</Text>
@@ -84,13 +114,17 @@ export default function OnboardingPaceAndDistanceScreen() {
             label="Min"
             value={distanceMin}
             onDecrement={() => setDistanceMin(v => Math.max(1, v - 1))}
-            onIncrement={() => setDistanceMin(v => Math.min(v + 1, distanceMax - 1))}
+            onIncrement={() =>
+              setDistanceMin(v => Math.min(v + 1, distanceMax - 1))
+            }
           />
           <View style={styles.distanceDivider} />
           <DistanceStepper
             label="Max"
             value={distanceMax}
-            onDecrement={() => setDistanceMax(v => Math.max(v - 1, distanceMin + 1))}
+            onDecrement={() =>
+              setDistanceMax(v => Math.max(v - 1, distanceMin + 1))
+            }
             onIncrement={() => setDistanceMax(v => Math.min(26, v + 1))}
           />
         </View>
@@ -117,11 +151,19 @@ function DistanceStepper({
     <View style={styles.stepperRow}>
       <Text style={styles.stepperLabel}>{label}</Text>
       <View style={styles.stepperControls}>
-        <TouchableOpacity style={styles.stepperBtn} onPress={onDecrement} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.stepperBtn}
+          onPress={onDecrement}
+          activeOpacity={0.7}
+        >
           <Ionicons name="remove" size={18} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.stepperValue}>{value}</Text>
-        <TouchableOpacity style={styles.stepperBtn} onPress={onIncrement} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.stepperBtn}
+          onPress={onIncrement}
+          activeOpacity={0.7}
+        >
           <Ionicons name="add" size={18} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>

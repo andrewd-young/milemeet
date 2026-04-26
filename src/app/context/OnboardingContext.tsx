@@ -1,18 +1,19 @@
 import React, {
+  type ReactNode,
   createContext,
   useCallback,
   useContext,
   useState,
-  type ReactNode,
 } from 'react'
 
 import { supabase } from '../../lib/api/supabase'
 
 type OnboardingData = {
+  email: string | null
   phone: string | null
   countryCode: string | null
   name: string | null
-  neighborhood: string | null
+  neighborhoods: string[]
   pace: number | null
   distanceMin: number | null
   distanceMax: number | null
@@ -23,10 +24,15 @@ type OnboardingData = {
 
 type OnboardingContextValue = {
   data: OnboardingData
+  setEmail: (email: string) => void
   setPhone: (phone: string, countryCode: string) => void
   setName: (name: string) => void
-  setNeighborhood: (neighborhood: string) => void
-  setPaceAndDistance: (pace: number, distanceMin: number, distanceMax: number) => void
+  setNeighborhoods: (neighborhoods: string[]) => void
+  setPaceAndDistance: (
+    pace: number,
+    distanceMin: number,
+    distanceMax: number,
+  ) => void
   setRunSchedule: (days: string[], times: string[]) => void
   setGoals: (goals: string[]) => void
   completeOnboarding: () => Promise<void>
@@ -37,10 +43,11 @@ const OnboardingContext = createContext<OnboardingContextValue | undefined>(
 )
 
 const defaultState: OnboardingData = {
+  email: null,
   phone: null,
   countryCode: null,
   name: null,
-  neighborhood: null,
+  neighborhoods: [],
   pace: null,
   distanceMin: null,
   distanceMax: null,
@@ -52,6 +59,10 @@ const defaultState: OnboardingData = {
 export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
   const [data, setData] = useState<OnboardingData>(defaultState)
 
+  const setEmail = (email: string) => {
+    setData(prev => ({ ...prev, email }))
+  }
+
   const setPhone = (phone: string, countryCode: string) => {
     setData(prev => ({ ...prev, phone, countryCode }))
   }
@@ -60,8 +71,8 @@ export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
     setData(prev => ({ ...prev, name }))
   }
 
-  const setNeighborhood = (neighborhood: string) => {
-    setData(prev => ({ ...prev, neighborhood }))
+  const setNeighborhoods = (neighborhoods: string[]) => {
+    setData(prev => ({ ...prev, neighborhoods }))
   }
 
   const setPaceAndDistance = (
@@ -81,12 +92,21 @@ export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const completeOnboarding = useCallback(async () => {
-    const { name, neighborhood, pace, distanceMin, distanceMax, runDays, runTimes, goals } =
-      data
+    const {
+      name,
+      neighborhoods,
+      pace,
+      distanceMin,
+      distanceMax,
+      runDays,
+      runTimes,
+      goals,
+      phone,
+    } = data
 
     if (
       !name ||
-      !neighborhood ||
+      neighborhoods.length === 0 ||
       pace == null ||
       distanceMin == null ||
       distanceMax == null
@@ -97,15 +117,19 @@ export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
     const { data: authData } = await supabase.auth.getUser()
     const userId = authData.user?.id ?? null
 
+    if (phone) {
+      await supabase.auth.updateUser({ data: { phone } })
+    }
+
     const payload = {
       name,
-      neighborhood,
+      neighborhood: neighborhoods[0],
       pace,
       distance_min: distanceMin,
       distance_max: distanceMax,
       run_days: runDays.length ? runDays : null,
       run_times: runTimes.length ? runTimes : null,
-      run_neighborhoods: [neighborhood],
+      run_neighborhoods: neighborhoods,
       goals: goals.length ? goals.join(', ') : null,
       user_id: userId,
     }
@@ -131,7 +155,6 @@ export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    console.log('[completeOnboarding] inserting payload:', JSON.stringify(payload, null, 2))
     const { error } = await supabase.from('runners').insert(payload)
     if (error) {
       console.error('[completeOnboarding] insert error:', error)
@@ -143,9 +166,10 @@ export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
     <OnboardingContext.Provider
       value={{
         data,
+        setEmail,
         setPhone,
         setName,
-        setNeighborhood,
+        setNeighborhoods,
         setPaceAndDistance,
         setRunSchedule,
         setGoals,
@@ -164,4 +188,3 @@ export const useOnboarding = () => {
   }
   return ctx
 }
-
