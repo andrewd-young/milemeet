@@ -9,7 +9,7 @@ import {
 } from 'react-native'
 
 import { useNavigation } from '@react-navigation/native'
-import type { StackNavigationProp } from '@react-navigation/stack'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { FontAwesome5 } from '@expo/vector-icons'
 
 import { supabase } from '../../lib/api/supabase'
@@ -21,7 +21,7 @@ type Runner = Tables<'runners'>
 
 const NearbyRunnersScreen = () => {
   const navigation =
-    useNavigation<StackNavigationProp<RootStackParamList, 'MainTabs'>>()
+    useNavigation<NativeStackNavigationProp<RootStackParamList, 'MainTabs'>>()
   const [runners, setRunners] = useState<Runner[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)

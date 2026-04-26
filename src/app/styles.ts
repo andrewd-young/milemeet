@@ -90,21 +90,37 @@ export const globalStyles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Slider styles
-  sliderRow: {
+  // Distance stepper styles
+  stepperRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
   },
-  slider: {
-    flex: 1,
-    marginHorizontal: 8,
+  stepperLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#555',
+    marginRight: 8,
   },
-  sliderValue: {
-    width: 32,
+  stepperButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#e5e7eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperButtonText: {
+    fontSize: 20,
+    color: '#111827',
+    lineHeight: 24,
+  },
+  stepperValue: {
+    width: 36,
     textAlign: 'center',
-    fontSize: 16,
-    color: '#222',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
   },
   sliderLabel: {
     fontSize: 14,

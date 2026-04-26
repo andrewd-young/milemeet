@@ -9,7 +9,7 @@ import {
 } from 'react-native'
 
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native'
-import type { StackNavigationProp } from '@react-navigation/stack'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { FontAwesome5 } from '@expo/vector-icons'
 
 import { supabase } from '../../lib/api/supabase'
@@ -21,7 +21,7 @@ type Runner = Tables<'runners'>
 type Connection = Tables<'run_connections'>
 
 type RunnerDetailRoute = RouteProp<RootStackParamList, 'RunnerDetail'>
-type RunnerDetailNav = StackNavigationProp<RootStackParamList, 'RunnerDetail'>
+type RunnerDetailNav = NativeStackNavigationProp<RootStackParamList, 'RunnerDetail'>
 
 const RunnerDetailScreen = () => {
   const route = useRoute<RunnerDetailRoute>()

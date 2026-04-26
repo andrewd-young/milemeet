@@ -1,8 +1,8 @@
 import React from 'react'
 
-import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { NavigationContainer } from '@react-navigation/native'
-import { createStackNavigator } from '@react-navigation/stack'
+import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
 
 import type { RootStackParamList } from '../types/navigation'
 import MainTabNavigator from './navigation/MainTabNavigator'
@@ -17,11 +17,11 @@ import OnboardingPaceAndDistanceScreen from './screens/onboarding/OnboardingPace
 import OnboardingPhoneScreen from './screens/onboarding/OnboardingPhoneScreen'
 import StravaConnectScreen from './screens/onboarding/StravaConnectScreen'
 
-const Stack = createStackNavigator<RootStackParamList>()
+const Stack = createNativeStackNavigator<RootStackParamList>()
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <SafeAreaProvider>
     <NavigationContainer>
       <OnboardingProvider>
         <Stack.Navigator
@@ -59,6 +59,6 @@ export default function App() {
         </Stack.Navigator>
       </OnboardingProvider>
     </NavigationContainer>
-    </GestureHandlerRootView>
+    </SafeAreaProvider>
   )
 }

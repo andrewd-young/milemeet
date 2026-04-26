@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import { Button, Text, TouchableOpacity, View } from 'react-native'
 
 import { useNavigation } from '@react-navigation/native'
-import type { StackNavigationProp } from '@react-navigation/stack'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
@@ -15,7 +15,7 @@ const OnboardingDaysAndTimesScreen = () => {
   const { setRunSchedule } = useOnboarding()
   const navigation =
     useNavigation<
-      StackNavigationProp<RootStackParamList, 'OnboardingDaysAndTimes'>
+      NativeStackNavigationProp<RootStackParamList, 'OnboardingDaysAndTimes'>
     >()
 
   const toggleSelection = (

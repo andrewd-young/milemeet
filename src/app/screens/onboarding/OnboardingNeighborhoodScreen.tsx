@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import { Button, Text, TextInput, View } from 'react-native'
 
 import { useNavigation } from '@react-navigation/native'
-import type { StackNavigationProp } from '@react-navigation/stack'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
@@ -14,7 +14,7 @@ const OnboardingNeighborhoodScreen = () => {
   const { setNeighborhood: setOnboardingNeighborhood } = useOnboarding()
   const navigation =
     useNavigation<
-      StackNavigationProp<RootStackParamList, 'OnboardingNeighborhood'>
+      NativeStackNavigationProp<RootStackParamList, 'OnboardingNeighborhood'>
     >()
 
   const handleNext = () => {

@@ -9,7 +9,7 @@ import {
 } from 'react-native'
 
 import { useNavigation } from '@react-navigation/native'
-import type { StackNavigationProp } from '@react-navigation/stack'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
@@ -20,7 +20,7 @@ const OnboardingGoalsScreen = () => {
   const [tags, setTags] = useState<string[]>([])
   const { setGoals } = useOnboarding()
   const navigation =
-    useNavigation<StackNavigationProp<RootStackParamList, 'OnboardingGoals'>>()
+    useNavigation<NativeStackNavigationProp<RootStackParamList, 'OnboardingGoals'>>()
 
   const addTag = (text: string) => {
     const trimmed = text.trim().replace(/,$/, '').trim()

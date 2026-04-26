@@ -11,9 +11,8 @@ import {
   View,
 } from 'react-native'
 
-import Slider from '@react-native-community/slider'
 import { useNavigation } from '@react-navigation/native'
-import type { StackNavigationProp } from '@react-navigation/stack'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import { supabase } from '../../lib/api/supabase'
 import type { RootStackParamList } from '../../types/navigation'
@@ -21,7 +20,7 @@ import type { Tables } from '../../types/supabase'
 import { globalStyles } from '../styles'
 
 type Runner = Tables<'runners'>
-type Nav = StackNavigationProp<RootStackParamList, 'EditProfile'>
+type Nav = NativeStackNavigationProp<RootStackParamList, 'EditProfile'>
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const TIMES = ['Morning', 'Afternoon', 'Evening']
@@ -218,31 +217,35 @@ const EditProfileScreen = () => {
           placeholderTextColor="#888"
         />
         <Text style={globalStyles.label}>Distance range (miles)</Text>
-        <View style={globalStyles.sliderRow}>
-          <Text style={globalStyles.sliderValue}>{distanceRange[0]}</Text>
-          <Slider
-            style={globalStyles.slider}
-            minimumValue={1}
-            maximumValue={20}
-            step={1}
-            value={distanceRange[0]}
-            onValueChange={handleMinDistanceChange}
-            minimumTrackTintColor="#1fb28a"
-            maximumTrackTintColor="#d3d3d3"
-            thumbTintColor="#1fb28a"
-          />
-          <Text style={globalStyles.sliderValue}>{distanceRange[1]}</Text>
-          <Slider
-            style={globalStyles.slider}
-            minimumValue={distanceRange[0] + 1}
-            maximumValue={20}
-            step={1}
-            value={distanceRange[1]}
-            onValueChange={handleMaxDistanceChange}
-            minimumTrackTintColor="#1fb28a"
-            maximumTrackTintColor="#d3d3d3"
-            thumbTintColor="#1fb28a"
-          />
+        <View style={globalStyles.stepperRow}>
+          <Text style={globalStyles.stepperLabel}>Min</Text>
+          <TouchableOpacity
+            style={globalStyles.stepperButton}
+            onPress={() => handleMinDistanceChange(Math.max(1, distanceRange[0] - 1))}
+          >
+            <Text style={globalStyles.stepperButtonText}>−</Text>
+          </TouchableOpacity>
+          <Text style={globalStyles.stepperValue}>{distanceRange[0]}</Text>
+          <TouchableOpacity
+            style={globalStyles.stepperButton}
+            onPress={() => handleMinDistanceChange(Math.min(distanceRange[0] + 1, distanceRange[1] - 1))}
+          >
+            <Text style={globalStyles.stepperButtonText}>+</Text>
+          </TouchableOpacity>
+          <Text style={[globalStyles.stepperLabel, { marginLeft: 16 }]}>Max</Text>
+          <TouchableOpacity
+            style={globalStyles.stepperButton}
+            onPress={() => handleMaxDistanceChange(Math.max(distanceRange[1] - 1, distanceRange[0] + 1))}
+          >
+            <Text style={globalStyles.stepperButtonText}>−</Text>
+          </TouchableOpacity>
+          <Text style={globalStyles.stepperValue}>{distanceRange[1]}</Text>
+          <TouchableOpacity
+            style={globalStyles.stepperButton}
+            onPress={() => handleMaxDistanceChange(Math.min(26, distanceRange[1] + 1))}
+          >
+            <Text style={globalStyles.stepperButtonText}>+</Text>
+          </TouchableOpacity>
         </View>
         <Text style={globalStyles.sliderLabel}>
           {distanceRange[0]} – {distanceRange[1]} miles

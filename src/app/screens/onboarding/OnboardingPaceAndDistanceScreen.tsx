@@ -1,10 +1,9 @@
 import React, { useState } from 'react'
 
-import { Button, Text, TextInput, View } from 'react-native'
+import { Button, Text, TextInput, TouchableOpacity, View } from 'react-native'
 
-import Slider from '@react-native-community/slider'
 import { useNavigation } from '@react-navigation/native'
-import type { StackNavigationProp } from '@react-navigation/stack'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
@@ -12,28 +11,18 @@ import { globalStyles } from '../../styles'
 
 const OnboardingPaceAndDistanceScreen = () => {
   const [pace, setPace] = useState('')
-  const [distanceRange, setDistanceRange] = useState<[number, number]>([3, 6])
+  const [distanceMin, setDistanceMin] = useState(3)
+  const [distanceMax, setDistanceMax] = useState(6)
   const { setPaceAndDistance } = useOnboarding()
   const navigation =
     useNavigation<
-      StackNavigationProp<RootStackParamList, 'OnboardingPaceAndDistance'>
+      NativeStackNavigationProp<RootStackParamList, 'OnboardingPaceAndDistance'>
     >()
 
-  const handleMinDistanceChange = (val: number) => {
-    setDistanceRange([val, Math.max(val + 1, distanceRange[1])])
-  }
-
-  const handleMaxDistanceChange = (val: number) => {
-    setDistanceRange([distanceRange[0], Math.max(val, distanceRange[0] + 1)])
-  }
-
-  // Convert pace string (e.g., "8:00") to minutes per mile as a number
   const parsePace = (paceStr: string): number | null => {
     const match = paceStr.match(/^(\d+):(\d{2})$/)
     if (match) {
-      const minutes = parseInt(match[1], 10)
-      const seconds = parseInt(match[2], 10)
-      return minutes + seconds / 60
+      return parseInt(match[1], 10) + parseInt(match[2], 10) / 60
     }
     return null
   }
@@ -43,7 +32,7 @@ const OnboardingPaceAndDistanceScreen = () => {
   const handleNext = () => {
     const parsed = parsePace(pace)
     if (parsed == null) return
-    setPaceAndDistance(parsed, distanceRange[0], distanceRange[1])
+    setPaceAndDistance(parsed, distanceMin, distanceMax)
     navigation.navigate('OnboardingDaysAndTimes')
   }
 
@@ -58,36 +47,41 @@ const OnboardingPaceAndDistanceScreen = () => {
         value={pace}
         onChangeText={setPace}
         placeholderTextColor="#888"
+        keyboardType="numbers-and-punctuation"
       />
       <Text style={globalStyles.label}>Distance range (miles)</Text>
-      <View style={globalStyles.sliderRow}>
-        <Text style={globalStyles.sliderValue}>{distanceRange[0]}</Text>
-        <Slider
-          style={globalStyles.slider}
-          minimumValue={1}
-          maximumValue={20}
-          step={1}
-          value={distanceRange[0]}
-          onValueChange={handleMinDistanceChange}
-          minimumTrackTintColor="#1fb28a"
-          maximumTrackTintColor="#d3d3d3"
-          thumbTintColor="#1fb28a"
-        />
-        <Text style={globalStyles.sliderValue}>{distanceRange[1]}</Text>
-        <Slider
-          style={globalStyles.slider}
-          minimumValue={distanceRange[0] + 1}
-          maximumValue={20}
-          step={1}
-          value={distanceRange[1]}
-          onValueChange={handleMaxDistanceChange}
-          minimumTrackTintColor="#1fb28a"
-          maximumTrackTintColor="#d3d3d3"
-          thumbTintColor="#1fb28a"
-        />
+      <View style={globalStyles.stepperRow}>
+        <Text style={globalStyles.stepperLabel}>Min</Text>
+        <TouchableOpacity
+          style={globalStyles.stepperButton}
+          onPress={() => setDistanceMin(Math.max(1, distanceMin - 1))}
+        >
+          <Text style={globalStyles.stepperButtonText}>−</Text>
+        </TouchableOpacity>
+        <Text style={globalStyles.stepperValue}>{distanceMin}</Text>
+        <TouchableOpacity
+          style={globalStyles.stepperButton}
+          onPress={() => setDistanceMin(Math.min(distanceMin + 1, distanceMax - 1))}
+        >
+          <Text style={globalStyles.stepperButtonText}>+</Text>
+        </TouchableOpacity>
+        <Text style={[globalStyles.stepperLabel, { marginLeft: 16 }]}>Max</Text>
+        <TouchableOpacity
+          style={globalStyles.stepperButton}
+          onPress={() => setDistanceMax(Math.max(distanceMax - 1, distanceMin + 1))}
+        >
+          <Text style={globalStyles.stepperButtonText}>−</Text>
+        </TouchableOpacity>
+        <Text style={globalStyles.stepperValue}>{distanceMax}</Text>
+        <TouchableOpacity
+          style={globalStyles.stepperButton}
+          onPress={() => setDistanceMax(Math.min(26, distanceMax + 1))}
+        >
+          <Text style={globalStyles.stepperButtonText}>+</Text>
+        </TouchableOpacity>
       </View>
       <Text style={globalStyles.sliderLabel}>
-        {distanceRange[0]} - {distanceRange[1]} miles
+        {distanceMin} – {distanceMax} miles
       </Text>
       <Button title="Next" onPress={handleNext} disabled={!isValidPace} />
     </View>

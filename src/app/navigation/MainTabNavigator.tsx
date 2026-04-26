@@ -5,7 +5,7 @@ import { TouchableOpacity } from 'react-native'
 import { FontAwesome5 } from '@expo/vector-icons'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { useNavigation } from '@react-navigation/native'
-import type { StackNavigationProp } from '@react-navigation/stack'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import type { MainTabParamList, RootStackParamList } from '../../types/navigation'
 import ConnectionsScreen from '../screens/ConnectionsScreen'
@@ -15,7 +15,7 @@ import ProfileScreen from '../screens/ProfileScreen'
 const Tab = createBottomTabNavigator<MainTabParamList>()
 
 const EditProfileButton = () => {
-  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>()
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
   return (
     <TouchableOpacity
       style={{ padding: 8, marginRight: 8 }}
