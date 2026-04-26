@@ -7,17 +7,33 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "ios-device": "expo run:ios --device",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "generate:types": "bash scripts/generate-types.sh",
+    "generate:types:manual": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/types/supabase.ts"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
+    "@react-native-community/cli": "latest",
+    "@react-native-community/slider": "5.0.1",
+    "@react-native-picker/picker": "2.11.1",
+    "@react-navigation/bottom-tabs": "^7.8.11",
+    "@react-navigation/native": "^7.1.20",
+    "@react-navigation/stack": "^7.6.4",
+    "@supabase/supabase-js": "^2.86.2",
     "eslint": "^9.39.1",
-    "expo": "~54.0.23",
-    "expo-status-bar": "~3.0.8",
+    "expo": "~54.0.33",
+    "expo-constants": "~18.0.13",
+    "expo-file-system": "~19.0.21",
+    "expo-secure-store": "^15.0.8",
+    "expo-status-bar": "~3.0.9",
     "prettier": "^3.6.2",
     "react": "19.1.0",
-    "react-native": "0.81.5"
+    "react-native": "0.81.5",
+    "react-native-date-picker": "^5.0.13",
+    "react-native-safe-area-context": "^5.6.2"
   },
   "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^6.0.0",
     "@types/react": "~19.1.0",
     "typescript": "~5.9.2"
   },
