@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -13,18 +12,19 @@ import {
   View,
 } from 'react-native'
 
+import { useRouter } from 'expo-router'
+
+import { Host, ProgressView } from '@expo/ui/swift-ui'
+import { progressViewStyle, tint } from '@expo/ui/swift-ui/modifiers'
+import GlassIconButton from '../../components/GlassIconButton'
 import { Ionicons } from '@expo/vector-icons'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { supabase } from '../../lib/api/supabase'
-import type { RootStackParamList } from '../../types/navigation'
 import type { Tables } from '../../types/supabase'
 import { colors, radii } from '../theme'
 
 type Runner = Tables<'runners'>
-type Nav = NativeStackNavigationProp<RootStackParamList, 'EditProfile'>
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const TIMES = ['Morning', 'Afternoon', 'Evening']
@@ -55,7 +55,7 @@ const formatPaceNumber = (pace: number): string => {
 
 const EditProfileScreen = () => {
   const insets = useSafeAreaInsets()
-  const navigation = useNavigation<Nav>()
+  const router = useRouter()
   const [runner, setRunner] = useState<Runner | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -129,7 +129,9 @@ const EditProfileScreen = () => {
     list: string[],
     setList: (l: string[]) => void,
   ) => {
-    setList(list.includes(item) ? list.filter(i => i !== item) : [...list, item])
+    setList(
+      list.includes(item) ? list.filter(i => i !== item) : [...list, item],
+    )
   }
 
   const addCustomGoal = () => {
@@ -182,7 +184,7 @@ const EditProfileScreen = () => {
         .eq('id', runner.id)
 
       if (error) throw error
-      navigation.goBack()
+      router.back()
     } catch (error) {
       Alert.alert(
         'Save failed',
@@ -195,15 +197,37 @@ const EditProfileScreen = () => {
 
   if (isLoading) {
     return (
-      <View style={[s.root, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={colors.accent} style={s.flex} />
+      <View
+        style={[
+          s.root,
+          {
+            paddingTop: insets.top,
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+        ]}
+      >
+        <Host matchContents>
+          <ProgressView
+            modifiers={[progressViewStyle('circular'), tint(colors.accent)]}
+          />
+        </Host>
       </View>
     )
   }
 
   if (!runner) {
     return (
-      <View style={[s.root, { paddingTop: insets.top, alignItems: 'center', justifyContent: 'center' }]}>
+      <View
+        style={[
+          s.root,
+          {
+            paddingTop: insets.top,
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+        ]}
+      >
         <Text style={{ color: colors.textSecondary }}>No profile found.</Text>
       </View>
     )
@@ -213,13 +237,7 @@ const EditProfileScreen = () => {
     <View style={[s.root, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={s.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={s.backButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
+        <GlassIconButton systemName="chevron.left" onPress={() => router.back()} />
         <Text style={s.headerTitle}>Edit Profile</Text>
         <View style={{ width: 34 }} />
       </View>
@@ -362,7 +380,9 @@ const EditProfileScreen = () => {
                   <TouchableOpacity
                     key={time}
                     style={[s.chip, selected && s.chipSelected]}
-                    onPress={() => toggle(time, selectedTimes, setSelectedTimes)}
+                    onPress={() =>
+                      toggle(time, selectedTimes, setSelectedTimes)
+                    }
                     activeOpacity={0.7}
                   >
                     <Text style={[s.chipText, selected && s.chipTextSelected]}>
@@ -385,7 +405,9 @@ const EditProfileScreen = () => {
                   <TouchableOpacity
                     key={goal}
                     style={[s.chip, selected && s.chipSelected]}
-                    onPress={() => toggle(goal, selectedGoals, setSelectedGoals)}
+                    onPress={() =>
+                      toggle(goal, selectedGoals, setSelectedGoals)
+                    }
                     activeOpacity={0.7}
                   >
                     <Text style={[s.chipText, selected && s.chipTextSelected]}>
@@ -477,7 +499,22 @@ const EditProfileScreen = () => {
 
         <View style={[s.footer, { paddingBottom: insets.bottom + 8 }]}>
           {isSaving ? (
-            <ActivityIndicator color={colors.accent} />
+            <View
+              style={{
+                height: 54,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Host matchContents>
+                <ProgressView
+                  modifiers={[
+                    progressViewStyle('circular'),
+                    tint(colors.accent),
+                  ]}
+                />
+              </Host>
+            </View>
           ) : (
             <TouchableOpacity
               style={s.saveButton}
@@ -512,14 +549,6 @@ const s = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     color: colors.textPrimary,
-  },
-  backButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   scrollContent: {
     paddingHorizontal: 20,

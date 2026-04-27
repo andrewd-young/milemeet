@@ -2,12 +2,11 @@ import React, { useState } from 'react'
 
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
+import { useRouter } from 'expo-router'
+
 import { Ionicons } from '@expo/vector-icons'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import OnboardingLayout from '../../../components/OnboardingLayout'
-import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
 import { colors, radii } from '../../theme'
 
@@ -28,16 +27,13 @@ function toggle(item: string, list: string[]): string[] {
 export default function OnboardingDaysAndTimesScreen() {
   const [selectedDays, setSelectedDays] = useState<string[]>([])
   const [selectedTimes, setSelectedTimes] = useState<string[]>([])
-  const navigation =
-    useNavigation<
-      NativeStackNavigationProp<RootStackParamList, 'OnboardingDaysAndTimes'>
-    >()
+  const router = useRouter()
   const { setRunSchedule } = useOnboarding()
 
   const handleNext = () => {
     if (!selectedDays.length || !selectedTimes.length) return
     setRunSchedule(selectedDays, selectedTimes)
-    navigation.navigate('OnboardingGoals')
+    router.push('/onboarding/goals')
   }
 
   return (

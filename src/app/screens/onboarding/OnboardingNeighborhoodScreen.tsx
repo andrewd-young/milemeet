@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+
 import {
   StyleSheet,
   Text,
@@ -6,20 +7,24 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+
+import { useRouter } from 'expo-router'
+
 import { Ionicons } from '@expo/vector-icons'
-import { RootStackParamList } from '../../../types/navigation'
-import { useOnboarding } from '../../context/OnboardingContext'
+
 import OnboardingLayout from '../../../components/OnboardingLayout'
-import { NEIGHBORHOODS, CITY_SHORT, type Neighborhood } from '../../../data/neighborhoods'
+import {
+  CITY_SHORT,
+  NEIGHBORHOODS,
+  type Neighborhood,
+} from '../../../data/neighborhoods'
+import { useOnboarding } from '../../context/OnboardingContext'
 import { colors, radii } from '../../theme'
 
 export default function OnboardingNeighborhoodScreen() {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Neighborhood[]>([])
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList, 'OnboardingNeighborhood'>>()
+  const router = useRouter()
   const { setNeighborhoods } = useOnboarding()
 
   const selectedKeys = new Set(selected.map(n => `${n.name}-${n.city}`))
@@ -49,7 +54,7 @@ export default function OnboardingNeighborhoodScreen() {
 
   const handleNext = () => {
     if (selected.length === 0) return
-    navigation.navigate('OnboardingPaceAndDistance')
+    router.push('/onboarding/pace-distance')
   }
 
   return (
@@ -104,7 +109,12 @@ export default function OnboardingNeighborhoodScreen() {
             >
               <Text style={styles.chipText}>{n.name}</Text>
               <Text style={styles.chipCity}>{CITY_SHORT[n.city]}</Text>
-              <Ionicons name="close" size={13} color={colors.accent} style={styles.chipClose} />
+              <Ionicons
+                name="close"
+                size={13}
+                color={colors.accent}
+                style={styles.chipClose}
+              />
             </TouchableOpacity>
           ))}
         </View>

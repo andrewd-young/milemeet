@@ -2,12 +2,11 @@ import React, { useState } from 'react'
 
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
+import { useRouter } from 'expo-router'
+
 import { Ionicons } from '@expo/vector-icons'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import OnboardingLayout from '../../../components/OnboardingLayout'
-import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
 import { colors, radii } from '../../theme'
 
@@ -46,16 +45,13 @@ export default function OnboardingPaceAndDistanceScreen() {
   const [selectedPace, setSelectedPace] = useState<number | null>(null)
   const [distanceMin, setDistanceMin] = useState(3)
   const [distanceMax, setDistanceMax] = useState(6)
-  const navigation =
-    useNavigation<
-      NativeStackNavigationProp<RootStackParamList, 'OnboardingPaceAndDistance'>
-    >()
+  const router = useRouter()
   const { setPaceAndDistance } = useOnboarding()
 
   const handleNext = () => {
     if (selectedPace === null) return
     setPaceAndDistance(selectedPace, distanceMin, distanceMax)
-    navigation.navigate('OnboardingDaysAndTimes')
+    router.push('/onboarding/days-times')
   }
 
   return (

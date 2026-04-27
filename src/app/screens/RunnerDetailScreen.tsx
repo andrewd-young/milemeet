@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,12 +8,15 @@ import {
   View,
 } from 'react-native'
 
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+
+import { Host, ProgressView } from '@expo/ui/swift-ui'
+import { progressViewStyle, tint } from '@expo/ui/swift-ui/modifiers'
+import GlassIconButton from '../../components/GlassIconButton'
 import { FontAwesome5 } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { supabase } from '../../lib/api/supabase'
-import type { RootStackParamList } from '../../types/navigation'
 import type { Tables } from '../../types/supabase'
 import { globalStyles } from '../styles'
 import { colors, radii } from '../theme'
@@ -22,13 +24,10 @@ import { colors, radii } from '../theme'
 type Runner = Tables<'runners'>
 type Connection = Tables<'run_connections'>
 
-type RunnerDetailRoute = RouteProp<RootStackParamList, 'RunnerDetail'>
-type RunnerDetailNav = NativeStackNavigationProp<RootStackParamList, 'RunnerDetail'>
-
 const RunnerDetailScreen = () => {
-  const route = useRoute<RunnerDetailRoute>()
-  const navigation = useNavigation<RunnerDetailNav>()
-  const { runnerId } = route.params
+  const { id: runnerId } = useLocalSearchParams<{ id: string }>()
+  const router = useRouter()
+  const insets = useSafeAreaInsets()
 
   const [runner, setRunner] = useState<Runner | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -115,7 +114,11 @@ const RunnerDetailScreen = () => {
   if (isLoading) {
     return (
       <View style={globalStyles.containerCentered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+        <Host matchContents>
+          <ProgressView
+            modifiers={[progressViewStyle('circular'), tint(colors.accent)]}
+          />
+        </Host>
         <Text style={[globalStyles.subtitle, { marginTop: 16 }]}>
           Loading runner…
         </Text>
@@ -148,7 +151,10 @@ const RunnerDetailScreen = () => {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
-        contentContainerStyle={s.scrollContent}
+        contentContainerStyle={[
+          s.scrollContent,
+          { paddingTop: insets.top + 60 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Profile header */}
@@ -186,14 +192,12 @@ const RunnerDetailScreen = () => {
         {runner.bio || runner.goals ? (
           <View style={s.section}>
             <Text style={s.sectionLabel}>ABOUT</Text>
-            <Text style={s.bodyText}>
-              {runner.bio || runner.goals}
-            </Text>
+            <Text style={s.bodyText}>{runner.bio || runner.goals}</Text>
           </View>
         ) : null}
 
         {/* Schedule */}
-        {(runner.run_days?.length || runner.run_times?.length) ? (
+        {runner.run_days?.length || runner.run_times?.length ? (
           <View style={s.section}>
             <Text style={s.sectionLabel}>SCHEDULE</Text>
             {runner.run_days?.length ? (
@@ -238,8 +242,15 @@ const RunnerDetailScreen = () => {
         </View>
       </ScrollView>
 
+      <View
+        pointerEvents="box-none"
+        style={{ position: 'absolute', top: insets.top + 8, left: 16 }}
+      >
+        <GlassIconButton systemName="chevron.left" onPress={() => router.back()} />
+      </View>
+
       {/* Fixed CTA */}
-      <View style={s.footer}>
+      <View style={[s.footer, { paddingBottom: insets.bottom + 16 }]}>
         {planMessage ? (
           <Text style={s.successMessage}>{planMessage}</Text>
         ) : null}
@@ -253,7 +264,11 @@ const RunnerDetailScreen = () => {
           activeOpacity={0.85}
         >
           {isPlanning ? (
-            <ActivityIndicator size="small" color={colors.bg} />
+            <Host matchContents>
+              <ProgressView
+                modifiers={[progressViewStyle('circular'), tint(colors.bg)]}
+              />
+            </Host>
           ) : (
             <>
               <FontAwesome5 name="running" size={18} color={colors.bg} />
@@ -271,7 +286,6 @@ const RunnerDetailScreen = () => {
 const s = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 16,
     paddingBottom: 120,
   },
   header: {
@@ -401,7 +415,6 @@ const s = StyleSheet.create({
   footer: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 32,
     backgroundColor: colors.bg,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,

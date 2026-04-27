@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 
 import {
-  ActivityIndicator,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -12,11 +11,14 @@ import {
   View,
 } from 'react-native'
 
-import { Ionicons } from '@expo/vector-icons'
-import { useNavigation } from '@react-navigation/native'
+import { useRouter } from 'expo-router'
+
+import { Host, ProgressView } from '@expo/ui/swift-ui'
+import { progressViewStyle, tint } from '@expo/ui/swift-ui/modifiers'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { colors, radii } from '../app/theme'
+import GlassIconButton from './GlassIconButton'
 
 interface Props {
   step: number
@@ -44,7 +46,7 @@ export default function OnboardingLayout({
   children,
 }: Props) {
   const insets = useSafeAreaInsets()
-  const navigation = useNavigation()
+  const router = useRouter()
   const [keyboardVisible, setKeyboardVisible] = useState(false)
 
   useEffect(() => {
@@ -72,17 +74,10 @@ export default function OnboardingLayout({
         <View style={styles.header}>
           <View style={styles.nav}>
             {showBack ? (
-              <TouchableOpacity
-                onPress={() => navigation.goBack()}
-                style={styles.backButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons
-                  name="chevron-back"
-                  size={20}
-                  color={colors.textPrimary}
-                />
-              </TouchableOpacity>
+              <GlassIconButton
+                systemName="chevron.left"
+                onPress={() => router.back()}
+              />
             ) : (
               <View style={styles.navSpacer} />
             )}
@@ -130,7 +125,14 @@ export default function OnboardingLayout({
             activeOpacity={0.82}
           >
             {isLoading ? (
-              <ActivityIndicator color={colors.textSecondary} />
+              <Host matchContents>
+                <ProgressView
+                  modifiers={[
+                    progressViewStyle('circular'),
+                    tint(colors.textSecondary),
+                  ]}
+                />
+              </Host>
             ) : (
               <Text
                 style={[styles.ctaText, nextDisabled && styles.ctaTextDisabled]}
@@ -163,14 +165,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 12,
     marginBottom: 14,
-  },
-  backButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   navSpacer: {
     width: 34,

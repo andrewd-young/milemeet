@@ -8,12 +8,11 @@ import {
   View,
 } from 'react-native'
 
+import { useRouter } from 'expo-router'
+
 import { Ionicons } from '@expo/vector-icons'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import OnboardingLayout from '../../../components/OnboardingLayout'
-import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
 import { colors, radii } from '../../theme'
 
@@ -34,10 +33,7 @@ export default function OnboardingGoalsScreen() {
   const [selectedPresets, setSelectedPresets] = useState<string[]>([])
   const [customInput, setCustomInput] = useState('')
   const [customGoals, setCustomGoals] = useState<string[]>([])
-  const navigation =
-    useNavigation<
-      NativeStackNavigationProp<RootStackParamList, 'OnboardingGoals'>
-    >()
+  const router = useRouter()
   const { setGoals } = useOnboarding()
 
   const togglePreset = (goal: string) => {
@@ -67,7 +63,7 @@ export default function OnboardingGoalsScreen() {
       ? [...customGoals, customInput.trim()]
       : customGoals
     setGoals([...selectedPresets, ...finalCustom])
-    navigation.navigate('StravaConnect')
+    router.push('/onboarding/strava')
   }
 
   const hasCustomGoals = customGoals.length > 0

@@ -1,17 +1,18 @@
 {
   "name": "milemeet",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "ios-device": "expo run:ios --device",
     "web": "expo start --web",
     "generate:types": "bash scripts/generate-types.sh",
     "generate:types:manual": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/types/supabase.ts"
   },
   "dependencies": {
+    "@expo/ui": "~55.0.12",
     "@expo/vector-icons": "^15.1.1",
     "@react-native-community/cli": "latest",
     "@react-navigation/bottom-tabs": "^7.8.11",
@@ -19,20 +20,23 @@
     "@react-navigation/native-stack": "^7.3.21",
     "@supabase/supabase-js": "^2.86.2",
     "eslint": "^9.39.1",
-    "expo": "~54.0.33",
-    "expo-constants": "~18.0.13",
-    "expo-file-system": "~19.0.21",
-    "expo-secure-store": "^15.0.8",
-    "expo-status-bar": "~3.0.9",
+    "expo": "^55.0.0",
+    "expo-constants": "~55.0.15",
+    "expo-file-system": "~55.0.17",
+    "expo-font": "~55.0.6",
+    "expo-router": "~55.0.13",
+    "expo-secure-store": "~55.0.13",
+    "expo-status-bar": "~55.0.5",
     "prettier": "^3.6.2",
-    "react": "19.1.0",
-    "react-native": "0.81.5",
-    "react-native-gesture-handler": "^2.31.1",
-    "react-native-safe-area-context": "^5.6.2"
+    "react": "19.2.0",
+    "react-native": "0.83.6",
+    "react-native-gesture-handler": "~2.30.0",
+    "react-native-safe-area-context": "^5.6.2",
+    "react-native-screens": "~4.23.0"
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^6.0.0",
-    "@types/react": "~19.1.0",
+    "@types/react": "~19.2.10",
     "typescript": "~5.9.2"
   },
   "private": true

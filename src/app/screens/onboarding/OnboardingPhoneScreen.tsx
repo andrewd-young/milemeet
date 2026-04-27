@@ -7,11 +7,9 @@ import {
   TextInput,
 } from 'react-native'
 
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { useRouter } from 'expo-router'
 
 import OnboardingLayout from '../../../components/OnboardingLayout'
-import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
 import { colors, radii } from '../../theme'
 
@@ -24,15 +22,12 @@ const INPUT_ID = 'phone-input'
 
 export default function OnboardingPhoneScreen() {
   const [phone, setPhone] = useState('')
-  const navigation =
-    useNavigation<
-      NativeStackNavigationProp<RootStackParamList, 'OnboardingPhone'>
-    >()
+  const router = useRouter()
   const { setPhone: setOnboardingPhone } = useOnboarding()
 
   const handleNext = () => {
     setOnboardingPhone(phone.trim(), 'US')
-    navigation.navigate('OnboardingNeighborhood')
+    router.push('/onboarding/neighborhood')
   }
 
   return (

@@ -2,12 +2,11 @@
   "expo": {
     "name": "milemeet",
     "slug": "milemeet",
+    "scheme": "milemeet",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
-    "jsEngine": "hermes",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -15,18 +14,24 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.a.young.milemeet"
+      "bundleIdentifier": "com.a.young.milemeet",
+      "appleTeamId": "YNA7WVL6XQ"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.a.young.milemeet"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-font",
+      ["expo-router", { "root": "app" }]
+    ]
   }
 }

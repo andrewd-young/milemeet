@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,12 +8,15 @@ import {
   View,
 } from 'react-native'
 
+import { useRouter } from 'expo-router'
+
+import { Host, ProgressView } from '@expo/ui/swift-ui'
+import { progressViewStyle, tint } from '@expo/ui/swift-ui/modifiers'
+import GlassIconButton from '../../components/GlassIconButton'
 import { FontAwesome5 } from '@expo/vector-icons'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { supabase } from '../../lib/api/supabase'
-import type { RootStackParamList } from '../../types/navigation'
 import type { Tables } from '../../types/supabase'
 import { globalStyles } from '../styles'
 import { colors, radii } from '../theme'
@@ -22,14 +24,29 @@ import { colors, radii } from '../theme'
 type Runner = Tables<'runners'>
 
 const CONNECTED_APPS = [
-  { key: 'strava' as const, icon: 'strava', label: 'Strava', activeColor: colors.strava },
-  { key: 'instagram' as const, icon: 'instagram', label: 'Instagram', activeColor: colors.accent },
-  { key: 'linkedin' as const, icon: 'linkedin', label: 'LinkedIn', activeColor: colors.accent },
+  {
+    key: 'strava' as const,
+    icon: 'strava',
+    label: 'Strava',
+    activeColor: colors.strava,
+  },
+  {
+    key: 'instagram' as const,
+    icon: 'instagram',
+    label: 'Instagram',
+    activeColor: colors.accent,
+  },
+  {
+    key: 'linkedin' as const,
+    icon: 'linkedin',
+    label: 'LinkedIn',
+    activeColor: colors.accent,
+  },
 ]
 
 const ProfileScreen = () => {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+  const insets = useSafeAreaInsets()
+  const router = useRouter()
   const [runner, setRunner] = useState<Runner | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -88,7 +105,11 @@ const ProfileScreen = () => {
   if (isLoading) {
     return (
       <View style={globalStyles.containerCentered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+        <Host matchContents>
+          <ProgressView
+            modifiers={[progressViewStyle('circular'), tint(colors.accent)]}
+          />
+        </Host>
         <Text style={[globalStyles.subtitle, { marginTop: 16 }]}>
           Loading profile…
         </Text>
@@ -115,147 +136,156 @@ const ProfileScreen = () => {
   }
 
   return (
-    <ScrollView
-      style={globalStyles.container}
-      contentContainerStyle={{ paddingBottom: 40 }}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Header */}
-      <View style={s.header}>
-        <View style={s.avatarLg}>
-          <FontAwesome5 name="user-circle" size={52} color={colors.accent} />
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <ScrollView
+        style={[globalStyles.container, { paddingTop: insets.top + 60 }]}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={s.header}>
+          <View style={s.avatarLg}>
+            <FontAwesome5 name="user-circle" size={52} color={colors.accent} />
+          </View>
+          <Text style={s.profileName}>{runner.name}</Text>
+          {runner.neighborhood ? (
+            <View style={s.locationRow}>
+              <FontAwesome5
+                name="map-marker-alt"
+                size={12}
+                color={colors.textSecondary}
+              />
+              <Text style={s.locationText}>{runner.neighborhood}</Text>
+            </View>
+          ) : null}
         </View>
-        <Text style={s.profileName}>{runner.name}</Text>
-        {runner.neighborhood ? (
-          <View style={s.locationRow}>
-            <FontAwesome5
-              name="map-marker-alt"
-              size={12}
-              color={colors.textSecondary}
-            />
-            <Text style={s.locationText}>{runner.neighborhood}</Text>
+
+        {/* Stats */}
+        <View style={s.statsRow}>
+          <View style={s.statBlock}>
+            <Text style={s.statLabel}>PACE</Text>
+            <Text style={s.statValue}>{formatPace(runner.pace)}</Text>
+          </View>
+          <View style={s.statDivider} />
+          <View style={s.statBlock}>
+            <Text style={s.statLabel}>DISTANCE</Text>
+            <Text style={s.statValue}>
+              {runner.distance_min}–{runner.distance_max} mi
+            </Text>
+          </View>
+        </View>
+
+        {/* About */}
+        {runner.bio ? (
+          <View style={s.section}>
+            <Text style={s.sectionLabel}>ABOUT</Text>
+            <Text style={s.bioText}>{runner.bio}</Text>
           </View>
         ) : null}
+
+        {/* Schedule */}
+        {runner.run_days?.length || runner.run_times?.length ? (
+          <View style={s.section}>
+            <Text style={s.sectionLabel}>SCHEDULE</Text>
+            {runner.run_days?.length ? (
+              <View style={s.chipsWrap}>
+                {runner.run_days.map(day => (
+                  <View key={day} style={s.dayChip}>
+                    <Text style={s.dayChipText}>{day}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            {runner.run_times?.length ? (
+              <View style={[s.chipsWrap, { marginTop: 6 }]}>
+                {runner.run_times.map(time => (
+                  <View key={time} style={s.timeChip}>
+                    <Text style={s.timeChipText}>{time}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Goals */}
+        {runner.goals ? (
+          <View style={s.section}>
+            <Text style={s.sectionLabel}>GOALS</Text>
+            <Text style={s.bodyText}>{runner.goals}</Text>
+          </View>
+        ) : null}
+
+        {/* Races & Clubs */}
+        {runner.past_races?.length || runner.run_clubs?.length ? (
+          <View style={s.section}>
+            <Text style={s.sectionLabel}>RACES & CLUBS</Text>
+            {runner.past_races?.length ? (
+              <View style={s.chipsWrap}>
+                {runner.past_races.map(race => (
+                  <View key={race} style={s.tagChip}>
+                    <Text style={s.tagChipText}>{race}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            {runner.run_clubs?.length ? (
+              <View style={[s.chipsWrap, { marginTop: 6 }]}>
+                {runner.run_clubs.map(club => (
+                  <View key={club} style={s.tagChip}>
+                    <Text style={s.tagChipText}>{club}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Connected Apps */}
+        <View style={s.section}>
+          <Text style={s.sectionLabel}>CONNECTED APPS</Text>
+          {CONNECTED_APPS.map((app, i) => {
+            const value = runner[app.key]
+            const isLast = i === CONNECTED_APPS.length - 1
+            return (
+              <View key={app.key} style={[s.appRow, isLast && s.appRowLast]}>
+                <FontAwesome5
+                  name={app.icon as any}
+                  size={16}
+                  color={value ? app.activeColor : colors.textTertiary}
+                  style={{ width: 20 }}
+                />
+                <Text
+                  style={[
+                    s.appRowLabel,
+                    !value && { color: colors.textTertiary },
+                  ]}
+                >
+                  {app.label}
+                </Text>
+                <Text style={s.appRowValue}>{value ?? 'Not connected'}</Text>
+              </View>
+            )
+          })}
+        </View>
+
+        {__DEV__ && (
+          <TouchableOpacity
+            onPress={() => router.push('/onboarding/name')}
+            style={s.devButton}
+          >
+            <Text style={s.devButtonText}>DEV — Restart onboarding</Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
+
+      <View
+        pointerEvents="box-none"
+        style={{ position: 'absolute', top: insets.top + 8, right: 16 }}
+      >
+        <GlassIconButton systemName="pencil" onPress={() => router.push('/edit-profile')} />
       </View>
-
-      {/* Stats */}
-      <View style={s.statsRow}>
-        <View style={s.statBlock}>
-          <Text style={s.statLabel}>PACE</Text>
-          <Text style={s.statValue}>{formatPace(runner.pace)}</Text>
-        </View>
-        <View style={s.statDivider} />
-        <View style={s.statBlock}>
-          <Text style={s.statLabel}>DISTANCE</Text>
-          <Text style={s.statValue}>
-            {runner.distance_min}–{runner.distance_max} mi
-          </Text>
-        </View>
-      </View>
-
-      {/* About */}
-      {runner.bio ? (
-        <View style={s.section}>
-          <Text style={s.sectionLabel}>ABOUT</Text>
-          <Text style={s.bioText}>{runner.bio}</Text>
-        </View>
-      ) : null}
-
-      {/* Schedule */}
-      {runner.run_days?.length || runner.run_times?.length ? (
-        <View style={s.section}>
-          <Text style={s.sectionLabel}>SCHEDULE</Text>
-          {runner.run_days?.length ? (
-            <View style={s.chipsWrap}>
-              {runner.run_days.map(day => (
-                <View key={day} style={s.dayChip}>
-                  <Text style={s.dayChipText}>{day}</Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-          {runner.run_times?.length ? (
-            <View style={[s.chipsWrap, { marginTop: 6 }]}>
-              {runner.run_times.map(time => (
-                <View key={time} style={s.timeChip}>
-                  <Text style={s.timeChipText}>{time}</Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-        </View>
-      ) : null}
-
-      {/* Goals */}
-      {runner.goals ? (
-        <View style={s.section}>
-          <Text style={s.sectionLabel}>GOALS</Text>
-          <Text style={s.bodyText}>{runner.goals}</Text>
-        </View>
-      ) : null}
-
-      {/* Races & Clubs */}
-      {runner.past_races?.length || runner.run_clubs?.length ? (
-        <View style={s.section}>
-          <Text style={s.sectionLabel}>RACES & CLUBS</Text>
-          {runner.past_races?.length ? (
-            <View style={s.chipsWrap}>
-              {runner.past_races.map(race => (
-                <View key={race} style={s.tagChip}>
-                  <Text style={s.tagChipText}>{race}</Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-          {runner.run_clubs?.length ? (
-            <View style={[s.chipsWrap, { marginTop: 6 }]}>
-              {runner.run_clubs.map(club => (
-                <View key={club} style={s.tagChip}>
-                  <Text style={s.tagChipText}>{club}</Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-        </View>
-      ) : null}
-
-      {/* Connected Apps */}
-      <View style={s.section}>
-        <Text style={s.sectionLabel}>CONNECTED APPS</Text>
-        {CONNECTED_APPS.map((app, i) => {
-          const value = runner[app.key]
-          const isLast = i === CONNECTED_APPS.length - 1
-          return (
-            <View key={app.key} style={[s.appRow, isLast && s.appRowLast]}>
-              <FontAwesome5
-                name={app.icon as any}
-                size={16}
-                color={value ? app.activeColor : colors.textTertiary}
-                style={{ width: 20 }}
-              />
-              <Text
-                style={[
-                  s.appRowLabel,
-                  !value && { color: colors.textTertiary },
-                ]}
-              >
-                {app.label}
-              </Text>
-              <Text style={s.appRowValue}>{value ?? 'Not connected'}</Text>
-            </View>
-          )
-        })}
-      </View>
-
-      {__DEV__ && (
-        <TouchableOpacity
-          onPress={() => navigation.navigate('OnboardingName')}
-          style={s.devButton}
-        >
-          <Text style={s.devButtonText}>DEV — Restart onboarding</Text>
-        </TouchableOpacity>
-      )}
-    </ScrollView>
+    </View>
   )
 }
 

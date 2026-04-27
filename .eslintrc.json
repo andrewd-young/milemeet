@@ -19,6 +19,7 @@
     "sourceType": "module"
   },
   "plugins": ["react", "@typescript-eslint", "prettier"],
+  "ignorePatterns": ["node_modules/"],
   "rules": {
     "react/react-in-jsx-scope": "off",
     "prettier/prettier": ["error"]

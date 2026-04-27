@@ -2,12 +2,10 @@ import React, { useState } from 'react'
 
 import { StyleSheet, TextInput } from 'react-native'
 
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { useRouter } from 'expo-router'
 
 import OnboardingLayout from '../../../components/OnboardingLayout'
 import { supabase } from '../../../lib/api/supabase'
-import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
 import { colors, radii } from '../../theme'
 
@@ -16,10 +14,7 @@ const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 export default function OnboardingEmailScreen() {
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const navigation =
-    useNavigation<
-      NativeStackNavigationProp<RootStackParamList, 'OnboardingEmail'>
-    >()
+  const router = useRouter()
   const { setEmail: setOnboardingEmail } = useOnboarding()
 
   const handleNext = async () => {
@@ -29,7 +24,7 @@ export default function OnboardingEmailScreen() {
       const { error } = await supabase.auth.signInWithOtp({ email: trimmed })
       if (error) throw error
       setOnboardingEmail(trimmed)
-      navigation.navigate('OnboardingVerify')
+      router.push('/onboarding/verify')
     } finally {
       setIsLoading(false)
     }

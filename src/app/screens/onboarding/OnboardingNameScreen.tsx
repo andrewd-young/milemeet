@@ -2,27 +2,22 @@ import React, { useState } from 'react'
 
 import { StyleSheet, TextInput } from 'react-native'
 
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { useRouter } from 'expo-router'
 
 import OnboardingLayout from '../../../components/OnboardingLayout'
-import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
 import { colors, radii } from '../../theme'
 
 export default function OnboardingNameScreen() {
   const [name, setName] = useState('')
-  const navigation =
-    useNavigation<
-      NativeStackNavigationProp<RootStackParamList, 'OnboardingName'>
-    >()
+  const router = useRouter()
   const { setName: setOnboardingName } = useOnboarding()
 
   const handleNext = () => {
     const trimmed = name.trim()
     if (!trimmed) return
     setOnboardingName(trimmed)
-    navigation.navigate('OnboardingPhone')
+    router.push('/onboarding/phone')
   }
 
   return (

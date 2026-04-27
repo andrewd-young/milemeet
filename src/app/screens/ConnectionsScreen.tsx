@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
 
 import {
-  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
@@ -9,25 +8,24 @@ import {
   View,
 } from 'react-native'
 
-import { FontAwesome5 } from '@expo/vector-icons'
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
-import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import { useRouter } from 'expo-router'
 
+import { Host, ProgressView } from '@expo/ui/swift-ui'
+import { progressViewStyle, tint } from '@expo/ui/swift-ui/modifiers'
+import { FontAwesome5 } from '@expo/vector-icons'
+import { useFocusEffect } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { supabase } from '../../lib/api/supabase'
-import type { MainTabParamList } from '../../types/navigation'
 import type { Tables } from '../../types/supabase'
 import { globalStyles } from '../styles'
 import { colors, radii } from '../theme'
 
 type Runner = Tables<'runners'>
 type ConnectionWithPartner = Tables<'run_connections'> & { partner: Runner }
-type ConnectionsNav = BottomTabNavigationProp<MainTabParamList, 'Connections'>
-
 const ConnectionsScreen = () => {
   const insets = useSafeAreaInsets()
-  const navigation = useNavigation<ConnectionsNav>()
+  const router = useRouter()
   const [connections, setConnections] = useState<ConnectionWithPartner[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -152,7 +150,11 @@ const ConnectionsScreen = () => {
   if (isLoading) {
     return (
       <View style={globalStyles.containerCentered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+        <Host matchContents>
+          <ProgressView
+            modifiers={[progressViewStyle('circular'), tint(colors.accent)]}
+          />
+        </Host>
         <Text style={[globalStyles.subtitle, { marginTop: 16 }]}>
           Loading your running circle…
         </Text>
@@ -188,7 +190,7 @@ const ConnectionsScreen = () => {
           access.
         </Text>
         <TouchableOpacity
-          onPress={() => navigation.navigate('NearbyRunners')}
+          onPress={() => router.navigate('/(tabs)')}
           style={[globalStyles.inlineButton, globalStyles.inlineButtonSelected]}
         >
           <Text style={globalStyles.inlineButtonTextSelected}>
@@ -211,7 +213,7 @@ const ConnectionsScreen = () => {
         data={connections}
         keyExtractor={item => item.id}
         renderItem={renderConnection}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 90 }}
         showsVerticalScrollIndicator={false}
       />
     </View>

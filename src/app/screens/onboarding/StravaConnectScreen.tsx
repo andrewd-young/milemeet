@@ -2,18 +2,16 @@ import React, { useState } from 'react'
 
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
+import { useRouter } from 'expo-router'
+
 import { FontAwesome5 } from '@expo/vector-icons'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 import OnboardingLayout from '../../../components/OnboardingLayout'
-import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
 import { colors, radii } from '../../theme'
 
 export default function StravaConnectScreen() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+  const router = useRouter()
   const { completeOnboarding } = useOnboarding()
   const [isSaving, setIsSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -23,10 +21,7 @@ export default function StravaConnectScreen() {
       setIsSaving(true)
       setErrorMessage(null)
       await completeOnboarding()
-      navigation.navigate({
-        name: 'MainTabs',
-        params: { screen: 'NearbyRunners' },
-      })
+      router.replace('/(tabs)')
     } catch (error) {
       console.error('[StravaConnectScreen] completeOnboarding threw:', error)
       const msg =

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 
 import {
-  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
@@ -9,14 +8,14 @@ import {
   View,
 } from 'react-native'
 
-import { FontAwesome5 } from '@expo/vector-icons'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { useRouter } from 'expo-router'
 
+import { Host, ProgressView } from '@expo/ui/swift-ui'
+import { progressViewStyle, tint } from '@expo/ui/swift-ui/modifiers'
+import { FontAwesome5 } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { supabase } from '../../lib/api/supabase'
-import type { RootStackParamList } from '../../types/navigation'
 import type { Tables } from '../../types/supabase'
 import { globalStyles } from '../styles'
 import { colors, radii } from '../theme'
@@ -25,8 +24,7 @@ type Runner = Tables<'runners'>
 
 const NearbyRunnersScreen = () => {
   const insets = useSafeAreaInsets()
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList, 'MainTabs'>>()
+  const router = useRouter()
   const [runners, setRunners] = useState<Runner[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -74,9 +72,7 @@ const NearbyRunnersScreen = () => {
     return (
       <TouchableOpacity
         style={s.card}
-        onPress={() =>
-          navigation.navigate('RunnerDetail', { runnerId: item.id })
-        }
+        onPress={() => router.push(`/runner/${item.id}`)}
         activeOpacity={0.75}
       >
         <View style={s.header}>
@@ -133,7 +129,11 @@ const NearbyRunnersScreen = () => {
   if (isLoading) {
     return (
       <View style={globalStyles.containerCentered}>
-        <ActivityIndicator size="large" color={colors.accent} />
+        <Host matchContents>
+          <ProgressView
+            modifiers={[progressViewStyle('circular'), tint(colors.accent)]}
+          />
+        </Host>
         <Text style={[globalStyles.subtitle, { marginTop: 16 }]}>
           Finding runners near you…
         </Text>
@@ -177,7 +177,7 @@ const NearbyRunnersScreen = () => {
         data={runners}
         keyExtractor={item => item.id}
         renderItem={renderRunner}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 90 }}
         showsVerticalScrollIndicator={false}
       />
     </View>

@@ -9,12 +9,10 @@ import {
   TouchableOpacity,
 } from 'react-native'
 
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { useRouter } from 'expo-router'
 
 import OnboardingLayout from '../../../components/OnboardingLayout'
 import { supabase } from '../../../lib/api/supabase'
-import { RootStackParamList } from '../../../types/navigation'
 import { useOnboarding } from '../../context/OnboardingContext'
 import { colors, radii } from '../../theme'
 
@@ -24,10 +22,7 @@ export default function OnboardingVerifyScreen() {
   const [code, setCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const navigation =
-    useNavigation<
-      NativeStackNavigationProp<RootStackParamList, 'OnboardingVerify'>
-    >()
+  const router = useRouter()
   const {
     data: { email },
   } = useOnboarding()
@@ -53,12 +48,12 @@ export default function OnboardingVerifyScreen() {
           .eq('user_id', userId)
           .maybeSingle()
         if (existing) {
-          navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })
+          router.replace('/(tabs)')
           return
         }
       }
 
-      navigation.navigate('OnboardingName')
+      router.push('/onboarding/name')
     } catch (err: any) {
       setError(err.message ?? 'Invalid code. Please try again.')
     } finally {
