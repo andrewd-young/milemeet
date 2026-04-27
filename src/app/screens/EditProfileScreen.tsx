@@ -6,6 +6,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -16,10 +17,10 @@ import { useRouter } from 'expo-router'
 
 import { Host, ProgressView } from '@expo/ui/swift-ui'
 import { progressViewStyle, tint } from '@expo/ui/swift-ui/modifiers'
-import GlassIconButton from '../../components/GlassIconButton'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import GlassIconButton from '../../components/GlassIconButton'
 import { supabase } from '../../lib/api/supabase'
 import type { Tables } from '../../types/supabase'
 import { colors, radii } from '../theme'
@@ -71,6 +72,8 @@ const EditProfileScreen = () => {
   const [goalInput, setGoalInput] = useState('')
   const [instagram, setInstagram] = useState('')
   const [linkedin, setLinkedin] = useState('')
+  const [strava, setStrava] = useState('')
+  const [stravaPublic, setStravaPublic] = useState(false)
 
   useEffect(() => {
     fetchRunner()
@@ -116,6 +119,8 @@ const EditProfileScreen = () => {
         }
         setInstagram(data.instagram ?? '')
         setLinkedin(data.linkedin ?? '')
+        setStrava(data.strava ?? '')
+        setStravaPublic(data.strava_public ?? false)
       }
     } catch {
       Alert.alert('Error', 'Could not load your profile.')
@@ -179,6 +184,8 @@ const EditProfileScreen = () => {
           goals: allGoals.length > 0 ? allGoals.join(', ') : null,
           instagram: instagram.trim() || null,
           linkedin: linkedin.trim() || null,
+          strava: strava.trim() || null,
+          strava_public: stravaPublic,
           updated_at: new Date().toISOString(),
         })
         .eq('id', runner.id)
@@ -237,7 +244,10 @@ const EditProfileScreen = () => {
     <View style={[s.root, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={s.header}>
-        <GlassIconButton systemName="chevron.left" onPress={() => router.back()} />
+        <GlassIconButton
+          systemName="chevron.left"
+          onPress={() => router.back()}
+        />
         <Text style={s.headerTitle}>Edit Profile</Text>
         <View style={{ width: 34 }} />
       </View>
@@ -495,6 +505,41 @@ const EditProfileScreen = () => {
               autoCapitalize="none"
             />
           </View>
+
+          {/* Strava */}
+          <View style={s.section}>
+            <Text style={s.sectionLabel}>STRAVA</Text>
+            <Text style={s.fieldLabel}>Username</Text>
+            <TextInput
+              style={[s.input, { marginBottom: 16 }]}
+              value={strava}
+              onChangeText={setStrava}
+              placeholder="your-strava-username"
+              placeholderTextColor={colors.textTertiary}
+              selectionColor={colors.accent}
+              keyboardAppearance="dark"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <View style={s.toggleRow}>
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text style={s.toggleLabel}>Share Strava profile</Text>
+                <Text style={s.toggleDescription}>
+                  Let other runners see your Strava activity insights
+                </Text>
+              </View>
+              <Switch
+                value={stravaPublic}
+                onValueChange={setStravaPublic}
+                trackColor={{
+                  false: colors.elevated,
+                  true: colors.accent + 'AA',
+                }}
+                thumbColor={stravaPublic ? colors.accent : colors.textTertiary}
+                ios_backgroundColor={colors.elevated}
+              />
+            </View>
+          </View>
         </ScrollView>
 
         <View style={[s.footer, { paddingBottom: insets.bottom + 8 }]}>
@@ -692,6 +737,21 @@ const s = StyleSheet.create({
   },
   goalInputAdd: {
     paddingLeft: 10,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  toggleLabel: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.textPrimary,
+  },
+  toggleDescription: {
+    fontSize: 12,
+    color: colors.textTertiary,
+    lineHeight: 16,
   },
   footer: {
     paddingHorizontal: 20,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 
 import {
   FlatList,
@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router'
 import { Host, ProgressView } from '@expo/ui/swift-ui'
 import { progressViewStyle, tint } from '@expo/ui/swift-ui/modifiers'
 import { FontAwesome5 } from '@expo/vector-icons'
+import { useFocusEffect } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { supabase } from '../../lib/api/supabase'
@@ -33,15 +34,58 @@ const NearbyRunnersScreen = () => {
     fetchRunners()
   }, [])
 
+  useFocusEffect(
+    useCallback(() => {
+      fetchRunners()
+    }, []),
+  )
+
   const fetchRunners = async () => {
     setIsLoading(true)
     setErrorMessage(null)
     try {
-      const { data, error } = await supabase
+      const { data: authData } = await supabase.auth.getUser()
+      const userId = authData.user?.id
+
+      const excludeIds: string[] = []
+
+      if (userId) {
+        const { data: me } = await supabase
+          .from('runners')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        if (me) {
+          excludeIds.push(me.id)
+
+          const [ownerConns, partnerConns] = await Promise.all([
+            supabase
+              .from('run_connections')
+              .select('partner_runner_id')
+              .eq('owner_runner_id', me.id),
+            supabase
+              .from('run_connections')
+              .select('owner_runner_id')
+              .eq('partner_runner_id', me.id),
+          ])
+
+          ownerConns.data?.forEach(c => excludeIds.push(c.partner_runner_id))
+          partnerConns.data?.forEach(c => excludeIds.push(c.owner_runner_id))
+        }
+      }
+
+      let query = supabase
         .from('runners')
         .select('*')
         .order('inserted_at', { ascending: false })
         .limit(20)
+
+      if (excludeIds.length > 0) {
+        query = query.not('id', 'in', `(${excludeIds.join(',')})`)
+      }
+
+      const { data, error } = await query
       if (error) throw error
       setRunners(data || [])
     } catch (error) {

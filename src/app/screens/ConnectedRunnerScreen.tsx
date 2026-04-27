@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react'
 
 import {
+  ActionSheetIOS,
+  Alert,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -31,26 +34,15 @@ const extractMessage = (err: unknown): string => {
   return 'Something went wrong'
 }
 
-type ConnectionStatus =
-  | 'none'
-  | 'pending_sent'
-  | 'pending_received'
-  | 'accepted'
-  | 'declined_sent'
-
-const RunnerDetailScreen = () => {
+const ConnectedRunnerScreen = () => {
   const { id: runnerId } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
 
   const [runner, setRunner] = useState<Runner | null>(null)
-  const [myRunner, setMyRunner] = useState<Runner | null>(null)
   const [connection, setConnection] = useState<Connection | null>(null)
-  const [connectionStatus, setConnectionStatus] =
-    useState<ConnectionStatus>('none')
   const [isLoading, setIsLoading] = useState(true)
-  const [isActing, setIsActing] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isRemoving, setIsRemoving] = useState(false)
 
   useEffect(() => {
     load()
@@ -58,7 +50,6 @@ const RunnerDetailScreen = () => {
 
   const load = async () => {
     setIsLoading(true)
-    setErrorMessage(null)
     try {
       const [runnerResult, authResult] = await Promise.all([
         supabase.from('runners').select('*').eq('id', runnerId).maybeSingle(),
@@ -74,14 +65,11 @@ const RunnerDetailScreen = () => {
 
       const { data: me } = await supabase
         .from('runners')
-        .select('*')
+        .select('id')
         .eq('user_id', userId)
         .maybeSingle()
 
       if (!me) return
-      setMyRunner(me)
-
-      if (me.id === runnerId) return
 
       const { data: conn } = await supabase
         .from('run_connections')
@@ -90,121 +78,72 @@ const RunnerDetailScreen = () => {
           `and(owner_runner_id.eq.${me.id},partner_runner_id.eq.${runnerId}),` +
             `and(owner_runner_id.eq.${runnerId},partner_runner_id.eq.${me.id})`,
         )
+        .eq('status', 'accepted')
         .maybeSingle()
 
       setConnection(conn ?? null)
-      setConnectionStatus(deriveStatus(conn ?? null, me.id))
     } catch (error) {
-      if (__DEV__) console.error('[RunnerDetail] load error:', error)
-      setErrorMessage(extractMessage(error))
+      if (__DEV__) console.error('[ConnectedRunner] load error:', error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const deriveStatus = (
-    conn: Connection | null,
-    myId: string,
-  ): ConnectionStatus => {
-    if (!conn) return 'none'
-    if (conn.status === 'accepted') return 'accepted'
-    if (conn.status === 'pending') {
-      return conn.owner_runner_id === myId ? 'pending_sent' : 'pending_received'
-    }
-    if (conn.status === 'declined' && conn.owner_runner_id === myId)
-      return 'declined_sent'
-    return 'none'
+  const openInstagram = async (handle: string) => {
+    const username = handle.replace('@', '')
+    const appUrl = `instagram://user?username=${username}`
+    const webUrl = `https://instagram.com/${username}`
+    const canOpen = await Linking.canOpenURL(appUrl)
+    Linking.openURL(canOpen ? appUrl : webUrl)
   }
 
-  const handleAction = async () => {
-    if (!myRunner) {
-      setErrorMessage(
-        'Sign in and complete your profile to connect with runners.',
-      )
-      return
-    }
-    if (!runner) return
-    setIsActing(true)
-    setErrorMessage(null)
+  const handleMenu = () => {
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        options: ['Cancel', 'Remove Connection'],
+        cancelButtonIndex: 0,
+        destructiveButtonIndex: 1,
+      },
+      async buttonIndex => {
+        if (buttonIndex === 1) confirmRemove()
+      },
+    )
+  }
 
+  const confirmRemove = () => {
+    Alert.alert(
+      'Remove Connection',
+      `Remove ${runner?.name ?? 'this runner'} from your running circle?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: removeConnection },
+      ],
+    )
+  }
+
+  const removeConnection = async () => {
+    if (!connection) return
+    setIsRemoving(true)
     try {
-      if (connectionStatus === 'none' || connectionStatus === 'declined_sent') {
-        const { data, error } = await supabase
-          .from('run_connections')
-          .insert({
-            owner_runner_id: myRunner.id,
-            partner_runner_id: runner.id,
-            status: 'pending',
-          })
-          .select()
-          .single()
+      const { error } = await supabase
+        .from('run_connections')
+        .delete()
+        .eq('id', connection.id)
 
-        if (error) throw error
-        setConnection(data)
-        setConnectionStatus('pending_sent')
-      } else if (connectionStatus === 'pending_received' && connection) {
-        const { data, error } = await supabase
-          .from('run_connections')
-          .update({ status: 'accepted', updated_at: new Date().toISOString() })
-          .eq('id', connection.id)
-          .select()
-          .single()
-
-        if (error) throw error
-        setConnection(data)
-        setConnectionStatus('accepted')
-      }
+      if (error) throw error
+      router.back()
     } catch (error) {
-      if (__DEV__) console.error('[RunnerDetail] action error:', error)
-      setErrorMessage(extractMessage(error))
+      if (__DEV__) console.error('[ConnectedRunner] remove error:', error)
+      Alert.alert('Error', extractMessage(error))
     } finally {
-      setIsActing(false)
+      setIsRemoving(false)
     }
   }
 
-  const ctaConfig = (): {
-    label: string
-    icon: string
-    disabled: boolean
-    accent: boolean
-  } => {
-    switch (connectionStatus) {
-      case 'none':
-        return {
-          label: 'Add to Running Circle',
-          icon: 'user-plus',
-          disabled: false,
-          accent: true,
-        }
-      case 'pending_sent':
-        return {
-          label: 'Request Sent',
-          icon: 'clock',
-          disabled: true,
-          accent: false,
-        }
-      case 'pending_received':
-        return {
-          label: 'Accept Request',
-          icon: 'check',
-          disabled: false,
-          accent: true,
-        }
-      case 'accepted':
-        return {
-          label: 'Connected',
-          icon: 'users',
-          disabled: true,
-          accent: false,
-        }
-      case 'declined_sent':
-        return {
-          label: 'Request Again',
-          icon: 'user-plus',
-          disabled: false,
-          accent: true,
-        }
-    }
+  const formatPace = (pace: number) => {
+    const m = Math.floor(pace)
+    const sec = Math.round((pace - m) * 60)
+    return `${m}:${sec.toString().padStart(2, '0')}/mi`
   }
 
   if (isLoading) {
@@ -215,9 +154,6 @@ const RunnerDetailScreen = () => {
             modifiers={[progressViewStyle('circular'), tint(colors.accent)]}
           />
         </Host>
-        <Text style={[globalStyles.subtitle, { marginTop: 16 }]}>
-          Loading runner…
-        </Text>
       </View>
     )
   }
@@ -225,21 +161,10 @@ const RunnerDetailScreen = () => {
   if (!runner) {
     return (
       <View style={globalStyles.containerCentered}>
-        <Text style={globalStyles.subtitle}>
-          {errorMessage ?? 'Runner not found.'}
-        </Text>
+        <Text style={globalStyles.subtitle}>Runner not found.</Text>
       </View>
     )
   }
-
-  const formatPace = (pace: number) => {
-    const m = Math.floor(pace)
-    const sec = Math.round((pace - m) * 60)
-    return `${m}:${sec.toString().padStart(2, '0')}/mi`
-  }
-
-  const isOwnProfile = myRunner?.id === runnerId
-  const cta = ctaConfig()
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -264,6 +189,35 @@ const RunnerDetailScreen = () => {
             />
             <Text style={s.locationText}>{runner.neighborhood}</Text>
           </View>
+        </View>
+
+        {/* Coordinate card — prominent */}
+        <View style={s.coordinateCard}>
+          <View style={s.coordinateHeader}>
+            <FontAwesome5 name="users" size={14} color={colors.accent} />
+            <Text style={s.coordinateTitle}>You're connected</Text>
+          </View>
+          {runner.instagram ? (
+            <TouchableOpacity
+              style={s.instagramButton}
+              onPress={() => openInstagram(runner.instagram!)}
+              activeOpacity={0.8}
+            >
+              <FontAwesome5 name="instagram" size={18} color="#fff" />
+              <View>
+                <Text style={s.instagramButtonLabel}>Message on Instagram</Text>
+                <Text style={s.instagramButtonHandle}>
+                  {runner.instagram.startsWith('@')
+                    ? runner.instagram
+                    : `@${runner.instagram}`}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <Text style={s.noContactText}>
+              {runner.name.split(' ')[0]} hasn't added Instagram yet.
+            </Text>
+          )}
         </View>
 
         {/* Stats */}
@@ -322,17 +276,6 @@ const RunnerDetailScreen = () => {
           </View>
         ) : null}
 
-        {/* Contact info — only visible to accepted connections */}
-        {connectionStatus === 'accepted' && runner.instagram ? (
-          <View style={s.section}>
-            <Text style={s.sectionLabel}>COORDINATE</Text>
-            <View style={s.contactRow}>
-              <FontAwesome5 name="instagram" size={16} color="#E1306C" />
-              <Text style={s.contactText}>{runner.instagram}</Text>
-            </View>
-          </View>
-        ) : null}
-
         {/* Safety note */}
         <View style={s.safetyNote}>
           <FontAwesome5
@@ -346,6 +289,7 @@ const RunnerDetailScreen = () => {
         </View>
       </ScrollView>
 
+      {/* Back button */}
       <View
         pointerEvents="box-none"
         style={{ position: 'absolute', top: insets.top + 8, left: 16 }}
@@ -356,46 +300,17 @@ const RunnerDetailScreen = () => {
         />
       </View>
 
-      {/* Fixed CTA — hidden for own profile */}
-      {!isOwnProfile ? (
-        <View style={[s.footer, { paddingBottom: insets.bottom + 16 }]}>
-          {errorMessage ? (
-            <Text style={s.errorMessage}>{errorMessage}</Text>
-          ) : null}
-          <TouchableOpacity
-            style={[
-              s.ctaButton,
-              !cta.accent && s.ctaButtonMuted,
-              (isActing || cta.disabled) && s.ctaButtonDim,
-            ]}
-            onPress={handleAction}
-            disabled={isActing || cta.disabled}
-            activeOpacity={0.85}
-          >
-            {isActing ? (
-              <Host matchContents>
-                <ProgressView
-                  modifiers={[
-                    progressViewStyle('circular'),
-                    tint(cta.accent ? colors.bg : colors.textPrimary),
-                  ]}
-                />
-              </Host>
-            ) : (
-              <>
-                <FontAwesome5
-                  name={cta.icon}
-                  size={16}
-                  color={cta.accent ? colors.bg : colors.textPrimary}
-                />
-                <Text style={[s.ctaText, !cta.accent && s.ctaTextMuted]}>
-                  {cta.label}
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-      ) : null}
+      {/* 3-dot menu */}
+      <View
+        pointerEvents="box-none"
+        style={{ position: 'absolute', top: insets.top + 8, right: 16 }}
+      >
+        <GlassIconButton
+          systemName="ellipsis"
+          onPress={handleMenu}
+          disabled={isRemoving}
+        />
+      </View>
     </View>
   )
 }
@@ -403,7 +318,7 @@ const RunnerDetailScreen = () => {
 const s = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 120,
+    paddingBottom: 60,
   },
   header: {
     alignItems: 'center',
@@ -436,6 +351,51 @@ const s = StyleSheet.create({
   locationText: {
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  coordinateCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    borderWidth: 1.5,
+    borderColor: colors.accent + '55',
+    padding: 16,
+    marginBottom: 12,
+    gap: 12,
+  },
+  coordinateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  coordinateTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.accent,
+    letterSpacing: 0.2,
+  },
+  instagramButton: {
+    backgroundColor: '#E1306C',
+    borderRadius: radii.lg,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  instagramButtonLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: -0.2,
+  },
+  instagramButtonHandle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.75)',
+    marginTop: 1,
+  },
+  noContactText: {
+    fontSize: 14,
+    color: colors.textTertiary,
+    fontStyle: 'italic',
   },
   statsRow: {
     flexDirection: 'row',
@@ -517,16 +477,6 @@ const s = StyleSheet.create({
     fontWeight: '500',
     color: colors.textSecondary,
   },
-  contactRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  contactText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.textPrimary,
-  },
   safetyNote: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -539,43 +489,6 @@ const s = StyleSheet.create({
     color: colors.textTertiary,
     lineHeight: 18,
   },
-  footer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    backgroundColor: colors.bg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    gap: 8,
-  },
-  ctaButton: {
-    backgroundColor: colors.accent,
-    borderRadius: radii.xl,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  ctaButtonMuted: {
-    backgroundColor: colors.elevated,
-  },
-  ctaButtonDim: {
-    opacity: 0.6,
-  },
-  ctaText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.bg,
-    letterSpacing: -0.2,
-  },
-  ctaTextMuted: {
-    color: colors.textPrimary,
-  },
-  errorMessage: {
-    fontSize: 14,
-    color: colors.error,
-    textAlign: 'center',
-  },
 })
 
-export default RunnerDetailScreen
+export default ConnectedRunnerScreen
