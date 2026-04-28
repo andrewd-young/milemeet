@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native'
 
+import { LinearGradient } from 'expo-linear-gradient'
 import { useRouter } from 'expo-router'
 
 import { Host, ProgressView } from '@expo/ui/swift-ui'
@@ -51,18 +52,21 @@ const formatPace = (pace: number) => {
   return `${m}:${sec.toString().padStart(2, '0')}`
 }
 
-const paceTier = (pace: number): string => {
-  if (pace < 7) return 'ELITE PACER'
-  if (pace < 9) return 'STRONG PACER'
-  if (pace < 11) return 'STEADY PACER'
-  return 'EASY PACER'
-}
-
 const timeMeta = (time: string): { abbrev: string; icon: string } => {
   const t = time.toLowerCase().trim()
-  if (t === 'morning' || t.includes('morning') || t.includes('am') || t.includes('early'))
+  if (
+    t === 'morning' ||
+    t.includes('morning') ||
+    t.includes('am') ||
+    t.includes('early')
+  )
     return { abbrev: 'MORNING', icon: 'coffee' }
-  if (t === 'noon' || t.includes('noon') || t.includes('afternoon') || t.includes('midday'))
+  if (
+    t === 'noon' ||
+    t.includes('noon') ||
+    t.includes('afternoon') ||
+    t.includes('midday')
+  )
     return { abbrev: 'NOON', icon: 'sun' }
   return { abbrev: 'NIGHT', icon: 'moon' }
 }
@@ -181,12 +185,21 @@ const ProfileScreen = () => {
             color={colors.accent}
             style={s.heroWatermark}
           />
+          <LinearGradient
+            colors={['transparent', 'rgba(13,13,13,0.35)', colors.bg]}
+            locations={[0, 0.65, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={s.heroGradient}
+          />
           <View style={s.heroBottom}>
             <Text style={s.heroName}>{runner.name}</Text>
             <View style={s.heroMeta}>
               <View style={s.paceBadge}>
                 <FontAwesome5 name="bolt" size={10} color={colors.bg} />
-                <Text style={s.paceBadgeText}>{paceTier(runner.pace)}</Text>
+                <Text style={s.paceBadgeText}>
+                  {formatPace(runner.pace)}/mi
+                </Text>
               </View>
               {runner.neighborhood ? (
                 <View style={s.locationRow}>
@@ -215,10 +228,18 @@ const ProfileScreen = () => {
           <View style={s.section}>
             <Text style={s.sectionHeading}>Recent Activity</Text>
             <View style={s.activityCard}>
-              <NeighborhoodMap
-                neighborhood={runner.neighborhood ?? ''}
-                height={180}
-              />
+              <View>
+                <NeighborhoodMap
+                  neighborhood={runner.neighborhood ?? ''}
+                  height={180}
+                />
+                <LinearGradient
+                  colors={['transparent', colors.surface]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={s.mapGradient}
+                />
+              </View>
               <View style={s.activityStats}>
                 <View style={s.activityStat}>
                   <Text style={s.activityStatLabel}>DISTANCE</Text>
@@ -377,6 +398,13 @@ const s = StyleSheet.create({
     bottom: 10,
     opacity: 0.07,
   },
+  heroGradient: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
   heroBottom: {
     gap: 10,
   },
@@ -442,6 +470,13 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  mapGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 56,
   },
   activityStats: {
     flexDirection: 'row',

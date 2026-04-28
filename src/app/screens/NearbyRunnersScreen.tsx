@@ -12,14 +12,14 @@ import { useRouter } from 'expo-router'
 
 import { Host, ProgressView } from '@expo/ui/swift-ui'
 import { progressViewStyle, tint } from '@expo/ui/swift-ui/modifiers'
-import { FontAwesome5 } from '@expo/vector-icons'
 import { useFocusEffect } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import NearbyRunnerCard from '../../components/NearbyRunnerCard'
 import { supabase } from '../../lib/api/supabase'
 import type { Tables } from '../../types/supabase'
 import { globalStyles } from '../styles'
-import { colors, radii } from '../theme'
+import { colors } from '../theme'
 
 type Runner = Tables<'runners'>
 
@@ -99,71 +99,12 @@ const NearbyRunnersScreen = () => {
     }
   }
 
-  const formatPace = (pace: number) => {
-    const m = Math.floor(pace)
-    const s = Math.round((pace - m) * 60)
-    return `${m}:${s.toString().padStart(2, '0')}/mi`
-  }
-
   const renderRunner = ({ item }: { item: Runner }) => {
-    const scheduleChips = [...(item.run_days ?? []), ...(item.run_times ?? [])]
-
     return (
-      <TouchableOpacity
-        style={globalStyles.runnerCard}
+      <NearbyRunnerCard
+        runner={item}
         onPress={() => router.push(`/runner/${item.id}`)}
-        activeOpacity={0.75}
-      >
-        <View style={s.cardHeader}>
-          <View style={globalStyles.runnerAvatarRinged}>
-            <FontAwesome5 name="running" size={22} color={colors.accent} />
-          </View>
-          <View style={globalStyles.runnerHeaderText}>
-            <Text style={globalStyles.runnerName}>{item.name}</Text>
-            <Text style={globalStyles.runnerNeighborhood}>
-              {item.neighborhood}
-            </Text>
-          </View>
-          <FontAwesome5
-            name="chevron-right"
-            size={13}
-            color={colors.textTertiary}
-          />
-        </View>
-
-        <View style={s.statsBar}>
-          <View style={s.statItem}>
-            <Text style={s.statLabel}>AVG PACE</Text>
-            <Text style={s.statValueAccent}>{formatPace(item.pace)}</Text>
-          </View>
-          <View style={s.statDivider} />
-          <View style={s.statItem}>
-            <Text style={s.statLabel}>DISTANCE</Text>
-            <Text style={s.statValue}>
-              {item.distance_min}–{item.distance_max} mi
-            </Text>
-          </View>
-        </View>
-
-        {scheduleChips.length > 0 ? (
-          <View style={globalStyles.runnerMetaRow}>
-            {scheduleChips.map(chip => (
-              <View key={chip} style={globalStyles.runnerChip}>
-                <Text style={globalStyles.runnerChipText}>{chip}</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        {item.goals ? (
-          <View style={globalStyles.runnerGoalsRow}>
-            <Text style={globalStyles.runnerGoalsLabel}>VIBES</Text>
-            <Text style={globalStyles.runnerGoalsText} numberOfLines={2}>
-              {item.goals}
-            </Text>
-          </View>
-        ) : null}
-      </TouchableOpacity>
+      />
     )
   }
 
@@ -240,47 +181,6 @@ const s = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 10,
-  },
-  statsBar: {
-    flexDirection: 'row',
-    backgroundColor: colors.elevated,
-    borderRadius: radii.lg,
-    overflow: 'hidden',
-    marginBottom: 2,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 10,
-    gap: 3,
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: colors.border,
-    marginVertical: 8,
-  },
-  statLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textTertiary,
-    letterSpacing: 0.8,
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  statValueAccent: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.accent,
-    letterSpacing: -0.3,
   },
 })
 

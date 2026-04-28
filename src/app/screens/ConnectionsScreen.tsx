@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
 
 import {
-  ScrollView,
   SectionList,
   StyleSheet,
   Text,
@@ -423,11 +422,7 @@ const ConnectionsScreen = () => {
 
   if (!pendingRequests.length && !sentRequests.length && !accepted.length) {
     return (
-      <ScrollView
-        style={{ flex: 1, backgroundColor: colors.bg }}
-        contentContainerStyle={s.emptyContent}
-        scrollEnabled={false}
-      >
+      <View style={globalStyles.containerCentered}>
         <View style={s.emptyIcon}>
           <FontAwesome5 name="running" size={32} color={colors.accent} />
         </View>
@@ -444,7 +439,7 @@ const ConnectionsScreen = () => {
             Browse runners
           </Text>
         </TouchableOpacity>
-      </ScrollView>
+      </View>
     )
   }
 
@@ -665,12 +660,6 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: colors.textSecondary,
-  },
-  emptyContent: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
   },
   emptyIcon: {
     width: 72,
