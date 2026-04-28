@@ -106,26 +106,23 @@ const NearbyRunnersScreen = () => {
   }
 
   const renderRunner = ({ item }: { item: Runner }) => {
-    const daysLabel = item.run_days?.length
-      ? item.run_days.join(' · ')
-      : 'Flexible'
-    const timesLabel = item.run_times?.length
-      ? item.run_times.join(', ')
-      : 'Any time'
+    const scheduleChips = [...(item.run_days ?? []), ...(item.run_times ?? [])]
 
     return (
       <TouchableOpacity
-        style={s.card}
+        style={globalStyles.runnerCard}
         onPress={() => router.push(`/runner/${item.id}`)}
         activeOpacity={0.75}
       >
-        <View style={s.header}>
-          <View style={s.avatar}>
-            <FontAwesome5 name="running" size={20} color={colors.accent} />
+        <View style={s.cardHeader}>
+          <View style={globalStyles.runnerAvatarRinged}>
+            <FontAwesome5 name="running" size={22} color={colors.accent} />
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.name}>{item.name}</Text>
-            <Text style={s.neighborhood}>{item.neighborhood}</Text>
+          <View style={globalStyles.runnerHeaderText}>
+            <Text style={globalStyles.runnerName}>{item.name}</Text>
+            <Text style={globalStyles.runnerNeighborhood}>
+              {item.neighborhood}
+            </Text>
           </View>
           <FontAwesome5
             name="chevron-right"
@@ -134,34 +131,34 @@ const NearbyRunnersScreen = () => {
           />
         </View>
 
-        <View style={s.chipsRow}>
-          <View style={s.chip}>
-            <Text style={s.chipLabel}>PACE</Text>
-            <Text style={s.chipValue}>{formatPace(item.pace)}</Text>
+        <View style={s.statsBar}>
+          <View style={s.statItem}>
+            <Text style={s.statLabel}>AVG PACE</Text>
+            <Text style={s.statValueAccent}>{formatPace(item.pace)}</Text>
           </View>
-          <View style={s.chip}>
-            <Text style={s.chipLabel}>DISTANCE</Text>
-            <Text style={s.chipValue}>
+          <View style={s.statDivider} />
+          <View style={s.statItem}>
+            <Text style={s.statLabel}>DISTANCE</Text>
+            <Text style={s.statValue}>
               {item.distance_min}–{item.distance_max} mi
             </Text>
           </View>
         </View>
 
-        <View style={s.pillsRow}>
-          <View style={s.pill}>
-            <Text style={s.pillLabel}>DAYS</Text>
-            <Text style={s.pillValue}>{daysLabel}</Text>
+        {scheduleChips.length > 0 ? (
+          <View style={globalStyles.runnerMetaRow}>
+            {scheduleChips.map(chip => (
+              <View key={chip} style={globalStyles.runnerChip}>
+                <Text style={globalStyles.runnerChipText}>{chip}</Text>
+              </View>
+            ))}
           </View>
-          <View style={s.pill}>
-            <Text style={s.pillLabel}>TIME</Text>
-            <Text style={s.pillValue}>{timesLabel}</Text>
-          </View>
-        </View>
+        ) : null}
 
         {item.goals ? (
-          <View style={s.vibesRow}>
-            <Text style={s.vibesLabel}>VIBES</Text>
-            <Text style={s.vibesText} numberOfLines={2}>
+          <View style={globalStyles.runnerGoalsRow}>
+            <Text style={globalStyles.runnerGoalsLabel}>VIBES</Text>
+            <Text style={globalStyles.runnerGoalsText} numberOfLines={2}>
               {item.goals}
             </Text>
           </View>
@@ -214,14 +211,23 @@ const NearbyRunnersScreen = () => {
   }
 
   return (
-    <View style={[globalStyles.container, { paddingTop: insets.top + 20 }]}>
-      <Text style={globalStyles.title}>Nearby Runners</Text>
-      <Text style={globalStyles.subtitle}>Find your perfect pace partner.</Text>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <FlatList
         data={runners}
         keyExtractor={item => item.id}
         renderItem={renderRunner}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 90 }}
+        contentContainerStyle={[
+          s.listContent,
+          { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 90 },
+        ]}
+        ListHeaderComponent={
+          <View style={s.pageHeader}>
+            <Text style={globalStyles.title}>Nearby Runners</Text>
+            <Text style={globalStyles.subtitle}>
+              Find your perfect pace partner.
+            </Text>
+          </View>
+        }
         showsVerticalScrollIndicator={false}
       />
     </View>
@@ -229,100 +235,52 @@ const NearbyRunnersScreen = () => {
 }
 
 const s = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.xl,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 10,
+  pageHeader: {
+    marginBottom: 4,
   },
-  header: {
+  listContent: {
+    paddingHorizontal: 20,
+  },
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    marginBottom: 10,
   },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.elevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  name: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    letterSpacing: -0.3,
-  },
-  neighborhood: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  chipsRow: {
+  statsBar: {
     flexDirection: 'row',
-    gap: 8,
-  },
-  chip: {
     backgroundColor: colors.elevated,
-    borderRadius: radii.md,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    gap: 2,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
+    marginBottom: 2,
   },
-  chipLabel: {
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    gap: 3,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: colors.border,
+    marginVertical: 8,
+  },
+  statLabel: {
     fontSize: 10,
     fontWeight: '700',
     color: colors.textTertiary,
     letterSpacing: 0.8,
   },
-  chipValue: {
+  statValue: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.textPrimary,
   },
-  pillsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.elevated,
-    borderRadius: radii.full,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    gap: 6,
-  },
-  pillLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textTertiary,
-    letterSpacing: 0.8,
-  },
-  pillValue: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textPrimary,
-  },
-  vibesRow: {
-    gap: 3,
-    paddingTop: 2,
-  },
-  vibesLabel: {
-    fontSize: 10,
+  statValueAccent: {
+    fontSize: 15,
     fontWeight: '700',
     color: colors.accent,
-    letterSpacing: 0.8,
-  },
-  vibesText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    lineHeight: 20,
+    letterSpacing: -0.3,
   },
 })
 

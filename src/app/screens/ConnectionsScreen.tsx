@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 
 import {
   ScrollView,
+  SectionList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -28,6 +29,19 @@ type Connection = Tables<'run_connections'>
 type PendingRequest = Connection & { requester: Runner }
 type SentRequest = Connection & { partner: Runner }
 type AcceptedConnection = Connection & { partner: Runner }
+
+type SectionItem =
+  | { type: 'request'; payload: PendingRequest }
+  | { type: 'sent'; payload: SentRequest }
+  | { type: 'connection'; payload: AcceptedConnection }
+
+type Section = {
+  key: string
+  title: string
+  count: number
+  isAccent: boolean
+  data: SectionItem[]
+}
 
 const ConnectionsScreen = () => {
   const insets = useSafeAreaInsets()
@@ -204,6 +218,178 @@ const ConnectionsScreen = () => {
     return `${m}:${sec.toString().padStart(2, '0')}/mi`
   }
 
+  const renderRequestCard = (req: PendingRequest) => (
+    <View style={s.requestCard}>
+      <View style={s.cardHeader}>
+        <View style={globalStyles.runnerAvatarRinged}>
+          <FontAwesome5 name="running" size={20} color={colors.accent} />
+        </View>
+        <View style={globalStyles.runnerHeaderText}>
+          <Text style={globalStyles.runnerName}>{req.requester.name}</Text>
+          <Text style={globalStyles.runnerNeighborhood}>
+            {req.requester.neighborhood}
+          </Text>
+        </View>
+      </View>
+
+      <View style={s.statsBar}>
+        <View style={s.statItem}>
+          <Text style={s.statLabel}>PACE</Text>
+          <Text style={s.statValueAccent}>
+            {formatPace(req.requester.pace)}
+          </Text>
+        </View>
+        <View style={s.statDivider} />
+        <View style={s.statItem}>
+          <Text style={s.statLabel}>DISTANCE</Text>
+          <Text style={s.statValue}>
+            {req.requester.distance_min}–{req.requester.distance_max} mi
+          </Text>
+        </View>
+      </View>
+
+      <View style={s.actionRow}>
+        <TouchableOpacity
+          style={[s.actionBtn, s.acceptBtn]}
+          onPress={() => handleAccept(req)}
+          disabled={actingId === req.id}
+          activeOpacity={0.8}
+        >
+          <FontAwesome5 name="check" size={13} color={colors.bg} />
+          <Text style={s.acceptBtnText}>Accept</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[s.actionBtn, s.declineBtn]}
+          onPress={() => handleDecline(req)}
+          disabled={actingId === req.id}
+          activeOpacity={0.8}
+        >
+          <Text style={s.declineBtnText}>Decline</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  )
+
+  const renderSentCard = (req: SentRequest) => (
+    <View style={[globalStyles.runnerCard, s.sentCard]}>
+      <View style={s.cardHeader}>
+        <View style={s.avatarMuted}>
+          <FontAwesome5 name="running" size={18} color={colors.textSecondary} />
+        </View>
+        <View style={globalStyles.runnerHeaderText}>
+          <Text style={globalStyles.runnerName}>{req.partner.name}</Text>
+          <Text style={globalStyles.runnerNeighborhood}>
+            {req.partner.neighborhood}
+          </Text>
+        </View>
+        <View style={s.pendingBadge}>
+          <Text style={s.pendingBadgeText}>Pending</Text>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={s.cancelBtn}
+        onPress={() => handleCancelSent(req)}
+        disabled={actingId === req.id}
+        activeOpacity={0.7}
+      >
+        <Text style={s.cancelBtnText}>Cancel request</Text>
+      </TouchableOpacity>
+    </View>
+  )
+
+  const renderConnectionCard = (conn: AcceptedConnection) => {
+    const partner = conn.partner
+    const scheduleChips = [
+      ...(partner.run_days ?? []),
+      ...(partner.run_times ?? []),
+    ]
+
+    return (
+      <TouchableOpacity
+        style={s.connectionCard}
+        onPress={() => router.push(`/connected-runner/${partner.id}`)}
+        activeOpacity={0.85}
+      >
+        <View style={s.cardHeader}>
+          <View style={globalStyles.runnerAvatarRinged}>
+            <FontAwesome5 name="running" size={20} color={colors.accent} />
+          </View>
+          <View style={globalStyles.runnerHeaderText}>
+            <Text style={globalStyles.runnerName}>{partner.name}</Text>
+            <Text style={globalStyles.runnerNeighborhood}>
+              {partner.neighborhood}
+            </Text>
+          </View>
+          <View style={s.connectedBadge}>
+            <FontAwesome5 name="users" size={10} color={colors.accent} />
+            <Text style={s.connectedBadgeText}>Connected</Text>
+          </View>
+        </View>
+
+        <View style={s.statsBar}>
+          <View style={s.statItem}>
+            <Text style={s.statLabel}>PACE</Text>
+            <Text style={s.statValueAccent}>{formatPace(partner.pace)}</Text>
+          </View>
+          <View style={s.statDivider} />
+          <View style={s.statItem}>
+            <Text style={s.statLabel}>DISTANCE</Text>
+            <Text style={s.statValue}>
+              {partner.distance_min}–{partner.distance_max} mi
+            </Text>
+          </View>
+        </View>
+
+        {scheduleChips.length > 0 ? (
+          <View style={globalStyles.runnerMetaRow}>
+            {scheduleChips.map(chip => (
+              <View key={chip} style={globalStyles.runnerChip}>
+                <Text style={globalStyles.runnerChipText}>{chip}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {partner.instagram ? (
+          <View style={s.instagramRow}>
+            <FontAwesome5 name="instagram" size={13} color="#E1306C" />
+            <Text style={s.instagramText}>{partner.instagram}</Text>
+          </View>
+        ) : null}
+      </TouchableOpacity>
+    )
+  }
+
+  const renderItem = ({ item }: { item: SectionItem }) => {
+    if (item.type === 'request') return renderRequestCard(item.payload)
+    if (item.type === 'sent') return renderSentCard(item.payload)
+    return renderConnectionCard(item.payload)
+  }
+
+  const renderSectionHeader = ({ section }: { section: Section }) => (
+    <View style={globalStyles.sectionRow}>
+      <Text style={globalStyles.sectionTitle}>{section.title}</Text>
+      <View
+        style={
+          section.isAccent
+            ? globalStyles.countPillAccent
+            : globalStyles.countPill
+        }
+      >
+        <Text
+          style={
+            section.isAccent
+              ? globalStyles.countPillTextAccent
+              : globalStyles.countPillText
+          }
+        >
+          {section.count}
+        </Text>
+      </View>
+    </View>
+  )
+
   if (isLoading) {
     return (
       <View style={globalStyles.containerCentered}>
@@ -237,12 +423,16 @@ const ConnectionsScreen = () => {
 
   if (!pendingRequests.length && !sentRequests.length && !accepted.length) {
     return (
-      <View style={globalStyles.containerCentered}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colors.bg }}
+        contentContainerStyle={s.emptyContent}
+        scrollEnabled={false}
+      >
         <View style={s.emptyIcon}>
           <FontAwesome5 name="running" size={32} color={colors.accent} />
         </View>
         <Text style={globalStyles.title}>Your Running Circle</Text>
-        <Text style={globalStyles.subtitle}>
+        <Text style={[globalStyles.subtitle, { textAlign: 'center' }]}>
           Find runners with compatible pace and schedule, then add them to your
           circle.
         </Text>
@@ -254,260 +444,107 @@ const ConnectionsScreen = () => {
             Browse runners
           </Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     )
   }
 
+  const sections: Section[] = [
+    pendingRequests.length
+      ? {
+          key: 'requests',
+          title: 'REQUESTS',
+          count: pendingRequests.length,
+          isAccent: true,
+          data: pendingRequests.map(r => ({
+            type: 'request' as const,
+            payload: r,
+          })),
+        }
+      : null,
+    sentRequests.length
+      ? {
+          key: 'sent',
+          title: 'SENT',
+          count: sentRequests.length,
+          isAccent: false,
+          data: sentRequests.map(r => ({ type: 'sent' as const, payload: r })),
+        }
+      : null,
+    accepted.length
+      ? {
+          key: 'connections',
+          title: 'CONNECTIONS',
+          count: accepted.length,
+          isAccent: false,
+          data: accepted.map(r => ({
+            type: 'connection' as const,
+            payload: r,
+          })),
+        }
+      : null,
+  ].filter(Boolean) as Section[]
+
   return (
-    <ScrollView
+    <SectionList
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={[
-        s.scrollContent,
+        s.listContent,
         { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 90 },
       ]}
+      sections={sections}
+      keyExtractor={item =>
+        item.type === 'request'
+          ? item.payload.id
+          : item.type === 'sent'
+            ? item.payload.id
+            : item.payload.id
+      }
+      renderItem={renderItem}
+      renderSectionHeader={renderSectionHeader}
+      ListHeaderComponent={
+        <Text style={[globalStyles.title, { marginBottom: 4 }]}>
+          Your Running Circle
+        </Text>
+      }
+      stickySectionHeadersEnabled={false}
       showsVerticalScrollIndicator={false}
-    >
-      <Text style={globalStyles.title}>Your Running Circle</Text>
-
-      {/* Pending requests section */}
-      {pendingRequests.length > 0 ? (
-        <View style={s.sectionBlock}>
-          <Text style={s.sectionHeader}>
-            REQUESTS · {pendingRequests.length}
-          </Text>
-          {pendingRequests.map(req => (
-            <View key={req.id} style={[s.card, s.requestCard]}>
-              <View style={s.cardHeader}>
-                <View style={s.avatar}>
-                  <FontAwesome5
-                    name="running"
-                    size={18}
-                    color={colors.accent}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.name}>{req.requester.name}</Text>
-                  <Text style={s.neighborhood}>
-                    {req.requester.neighborhood}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={s.chipsRow}>
-                <View style={s.chip}>
-                  <Text style={s.chipLabel}>PACE</Text>
-                  <Text style={s.chipValue}>
-                    {formatPace(req.requester.pace)}
-                  </Text>
-                </View>
-                <View style={s.chip}>
-                  <Text style={s.chipLabel}>DISTANCE</Text>
-                  <Text style={s.chipValue}>
-                    {req.requester.distance_min}–{req.requester.distance_max} mi
-                  </Text>
-                </View>
-              </View>
-
-              <View style={s.actionRow}>
-                <TouchableOpacity
-                  style={[s.actionBtn, s.acceptBtn]}
-                  onPress={() => handleAccept(req)}
-                  disabled={actingId === req.id}
-                  activeOpacity={0.8}
-                >
-                  <Text style={s.acceptBtnText}>Accept</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[s.actionBtn, s.declineBtn]}
-                  onPress={() => handleDecline(req)}
-                  disabled={actingId === req.id}
-                  activeOpacity={0.8}
-                >
-                  <Text style={s.declineBtnText}>Decline</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-        </View>
-      ) : null}
-
-      {/* Sent pending requests */}
-      {sentRequests.length > 0 ? (
-        <View style={s.sectionBlock}>
-          <Text style={s.sectionHeader}>SENT · {sentRequests.length}</Text>
-          {sentRequests.map(req => (
-            <View key={req.id} style={[s.card, s.sentCard]}>
-              <View style={s.cardHeader}>
-                <View style={s.avatar}>
-                  <FontAwesome5
-                    name="running"
-                    size={18}
-                    color={colors.textSecondary}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.name}>{req.partner.name}</Text>
-                  <Text style={s.neighborhood}>{req.partner.neighborhood}</Text>
-                </View>
-                <View style={s.pendingBadge}>
-                  <Text style={s.pendingBadgeText}>Pending</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={s.cancelBtn}
-                onPress={() => handleCancelSent(req)}
-                disabled={actingId === req.id}
-                activeOpacity={0.7}
-              >
-                <Text style={s.cancelBtnText}>Cancel request</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-      ) : null}
-
-      {/* Accepted connections */}
-      {accepted.length > 0 ? (
-        <View style={s.sectionBlock}>
-          <Text style={s.sectionHeader}>CONNECTIONS · {accepted.length}</Text>
-          {accepted.map(conn => {
-            const partner = conn.partner
-            const daysLabel = partner.run_days?.length
-              ? partner.run_days.join(' · ')
-              : 'Flexible'
-            const timesLabel = partner.run_times?.length
-              ? partner.run_times.join(', ')
-              : 'Any time'
-
-            return (
-              <TouchableOpacity
-                key={conn.id}
-                style={s.card}
-                onPress={() => router.push(`/connected-runner/${partner.id}`)}
-                activeOpacity={0.85}
-              >
-                <View style={s.cardHeader}>
-                  <View style={s.avatar}>
-                    <FontAwesome5
-                      name="running"
-                      size={18}
-                      color={colors.accent}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.name}>{partner.name}</Text>
-                    <Text style={s.neighborhood}>{partner.neighborhood}</Text>
-                  </View>
-                  <View style={s.connectedBadge}>
-                    <FontAwesome5
-                      name="users"
-                      size={10}
-                      color={colors.accent}
-                    />
-                    <Text style={s.connectedBadgeText}>Connected</Text>
-                  </View>
-                </View>
-
-                <View style={s.chipsRow}>
-                  <View style={s.chip}>
-                    <Text style={s.chipLabel}>PACE</Text>
-                    <Text style={s.chipValue}>{formatPace(partner.pace)}</Text>
-                  </View>
-                  <View style={s.chip}>
-                    <Text style={s.chipLabel}>DISTANCE</Text>
-                    <Text style={s.chipValue}>
-                      {partner.distance_min}–{partner.distance_max} mi
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={s.pillsRow}>
-                  <View style={s.pill}>
-                    <Text style={s.pillLabel}>DAYS</Text>
-                    <Text style={s.pillValue}>{daysLabel}</Text>
-                  </View>
-                  <View style={s.pill}>
-                    <Text style={s.pillLabel}>TIME</Text>
-                    <Text style={s.pillValue}>{timesLabel}</Text>
-                  </View>
-                </View>
-
-                {partner.instagram ? (
-                  <View style={s.instagramRow}>
-                    <FontAwesome5 name="instagram" size={13} color="#E1306C" />
-                    <Text style={s.instagramText}>{partner.instagram}</Text>
-                  </View>
-                ) : null}
-              </TouchableOpacity>
-            )
-          })}
-        </View>
-      ) : null}
-    </ScrollView>
+    />
   )
 }
 
 const s = StyleSheet.create({
-  scrollContent: {
+  listContent: {
     paddingHorizontal: 20,
     gap: 4,
-  },
-  sectionBlock: {
-    marginTop: 16,
-    gap: 10,
-  },
-  sectionHeader: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textTertiary,
-    letterSpacing: 1,
-    marginBottom: 2,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.xl,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 10,
-  },
-  requestCard: {
-    borderColor: colors.accent + '44',
-  },
-  sentCard: {
-    borderColor: colors.border,
-    opacity: 0.85,
-  },
-  pendingBadge: {
-    backgroundColor: colors.elevated,
-    borderRadius: radii.full,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-  },
-  pendingBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textTertiary,
-  },
-  cancelBtn: {
-    alignSelf: 'flex-start',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: radii.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cancelBtnText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textSecondary,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  avatar: {
+  requestCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.accent + '44',
+    gap: 10,
+  },
+  sentCard: {
+    opacity: 0.8,
+    gap: 10,
+  },
+  connectionCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 10,
+  },
+  avatarMuted: {
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -515,88 +552,39 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  name: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    letterSpacing: -0.3,
-  },
-  neighborhood: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  connectedBadge: {
+  statsBar: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
     backgroundColor: colors.elevated,
-    borderRadius: radii.full,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
   },
-  connectedBadgeText: {
-    fontSize: 11,
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    gap: 3,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: colors.border,
+    marginVertical: 8,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textTertiary,
+    letterSpacing: 0.8,
+  },
+  statValue: {
+    fontSize: 14,
     fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  statValueAccent: {
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.accent,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  chip: {
-    backgroundColor: colors.elevated,
-    borderRadius: radii.md,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    gap: 2,
-  },
-  chipLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textTertiary,
-    letterSpacing: 0.8,
-  },
-  chipValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  pillsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.elevated,
-    borderRadius: radii.full,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    gap: 6,
-  },
-  pillLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textTertiary,
-    letterSpacing: 0.8,
-  },
-  pillValue: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textPrimary,
-  },
-  instagramRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingTop: 2,
-  },
-  instagramText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textSecondary,
+    letterSpacing: -0.3,
   },
   actionRow: {
     flexDirection: 'row',
@@ -604,10 +592,12 @@ const s = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
-    paddingVertical: 11,
+    paddingVertical: 12,
     borderRadius: radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 7,
   },
   acceptBtn: {
     backgroundColor: colors.accent,
@@ -626,6 +616,61 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.textSecondary,
+  },
+  pendingBadge: {
+    backgroundColor: colors.elevated,
+    borderRadius: radii.full,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  pendingBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textTertiary,
+  },
+  cancelBtn: {
+    alignSelf: 'flex-start',
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cancelBtnText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  connectedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.accent + '18',
+    borderRadius: radii.full,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  connectedBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.accent,
+  },
+  instagramRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 2,
+  },
+  instagramText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  emptyContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
   },
   emptyIcon: {
     width: 72,

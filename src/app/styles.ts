@@ -350,13 +350,53 @@ export const globalStyles = StyleSheet.create({
   runnerGoalsLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: colors.accent,
     marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
   runnerGoalsText: {
     fontSize: 14,
-    color: colors.textPrimary,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+
+  runnerAvatarRinged: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.accent,
+  },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  countPill: {
+    backgroundColor: colors.elevated,
+    borderRadius: radii.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  countPillText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textTertiary,
+  },
+  countPillAccent: {
+    backgroundColor: colors.accent + '22',
+    borderRadius: radii.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  countPillTextAccent: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.accent,
   },
 })
