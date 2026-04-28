@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native'
+
 import { colors, radii } from './theme'
 
 export const globalStyles = StyleSheet.create({
@@ -27,6 +28,7 @@ export const globalStyles = StyleSheet.create({
     marginBottom: 24,
     color: colors.textSecondary,
     lineHeight: 21,
+    textAlign: 'center',
   },
   label: {
     fontSize: 13,

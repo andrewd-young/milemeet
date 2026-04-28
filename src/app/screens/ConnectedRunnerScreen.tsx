@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native'
 
+import { LinearGradient } from 'expo-linear-gradient'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 
 import { Host, ProgressView } from '@expo/ui/swift-ui'
@@ -32,6 +33,12 @@ const extractMessage = (err: unknown): string => {
   if (err && typeof err === 'object' && 'message' in err)
     return String((err as { message: unknown }).message)
   return 'Something went wrong'
+}
+
+const formatPace = (pace: number) => {
+  const m = Math.floor(pace)
+  const sec = Math.round((pace - m) * 60)
+  return `${m}:${sec.toString().padStart(2, '0')}/mi`
 }
 
 const ConnectedRunnerScreen = () => {
@@ -140,12 +147,6 @@ const ConnectedRunnerScreen = () => {
     }
   }
 
-  const formatPace = (pace: number) => {
-    const m = Math.floor(pace)
-    const sec = Math.round((pace - m) * 60)
-    return `${m}:${sec.toString().padStart(2, '0')}/mi`
-  }
-
   if (isLoading) {
     return (
       <View style={globalStyles.containerCentered}>
@@ -166,130 +167,166 @@ const ConnectedRunnerScreen = () => {
     )
   }
 
+  const scheduleChips = [
+    ...(runner.run_days ?? []),
+    ...(runner.run_times ?? []),
+  ]
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView
-        contentContainerStyle={[
-          s.scrollContent,
-          { paddingTop: insets.top + 60 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Profile header */}
-        <View style={s.header}>
-          <View style={s.avatar}>
-            <FontAwesome5 name="running" size={36} color={colors.accent} />
-          </View>
-          <Text style={s.name}>{runner.name}</Text>
-          <View style={s.locationRow}>
-            <FontAwesome5
-              name="map-marker-alt"
-              size={12}
-              color={colors.textSecondary}
-            />
-            <Text style={s.locationText}>{runner.neighborhood}</Text>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Hero — full-bleed, same language as NearbyRunnerCard */}
+        <View style={s.heroCard}>
+          <FontAwesome5
+            name="running"
+            size={220}
+            color={colors.accent}
+            style={s.heroWatermark}
+          />
+          <LinearGradient
+            colors={['transparent', 'rgba(13,13,13,0.7)', colors.bg]}
+            locations={[0, 0.4, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={[s.heroContent, { paddingTop: insets.top + 64 }]}>
+            <View style={s.connectedBadge}>
+              <FontAwesome5 name="users" size={10} color={colors.accent} />
+              <Text style={s.connectedBadgeText}>Connected</Text>
+            </View>
+            <Text style={s.heroName}>{runner.name}</Text>
+            <View style={s.heroMeta}>
+              <View style={s.paceBadge}>
+                <FontAwesome5 name="bolt" size={9} color={colors.bg} />
+                <Text style={s.paceBadgeText}>{formatPace(runner.pace)}</Text>
+              </View>
+              {runner.neighborhood ? (
+                <View style={s.locationRow}>
+                  <FontAwesome5
+                    name="map-marker-alt"
+                    size={12}
+                    color={colors.textSecondary}
+                  />
+                  <Text style={s.locationText}>{runner.neighborhood}</Text>
+                </View>
+              ) : null}
+            </View>
           </View>
         </View>
 
-        {/* Coordinate card — prominent */}
-        <View style={s.coordinateCard}>
-          <View style={s.coordinateHeader}>
-            <FontAwesome5 name="users" size={14} color={colors.accent} />
-            <Text style={s.coordinateTitle}>You're connected</Text>
-          </View>
-          {runner.instagram ? (
-            <TouchableOpacity
-              style={s.instagramButton}
-              onPress={() => openInstagram(runner.instagram!)}
-              activeOpacity={0.8}
-            >
-              <FontAwesome5 name="instagram" size={18} color="#fff" />
-              <View>
-                <Text style={s.instagramButtonLabel}>Message on Instagram</Text>
-                <Text style={s.instagramButtonHandle}>
-                  {runner.instagram.startsWith('@')
-                    ? runner.instagram
-                    : `@${runner.instagram}`}
+        <View style={s.content}>
+          {/* Coordinate — messages cue */}
+          <View style={s.coordinateCard}>
+            <View style={s.coordinateHeader}>
+              <FontAwesome5
+                name="paper-plane"
+                size={13}
+                color={colors.accent}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={s.coordinateTitle}>Coordinate a run</Text>
+                <Text style={s.coordinateSubtitle}>
+                  Reach out to plan your next run together
                 </Text>
               </View>
-            </TouchableOpacity>
-          ) : (
-            <Text style={s.noContactText}>
-              {runner.name.split(' ')[0]} hasn't added Instagram yet.
-            </Text>
-          )}
-        </View>
+            </View>
 
-        {/* Stats */}
-        <View style={s.statsRow}>
-          <View style={s.statBlock}>
-            <Text style={s.statLabel}>PACE</Text>
-            <Text style={s.statValue}>{formatPace(runner.pace)}</Text>
+            {runner.instagram ? (
+              <TouchableOpacity
+                style={s.messageButton}
+                onPress={() => openInstagram(runner.instagram!)}
+                activeOpacity={0.8}
+              >
+                <View style={s.messageIconWrap}>
+                  <FontAwesome5 name="instagram" size={18} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.messageTitle}>Message on Instagram</Text>
+                  <Text style={s.messageHandle}>
+                    {runner.instagram.startsWith('@')
+                      ? runner.instagram
+                      : `@${runner.instagram}`}
+                  </Text>
+                </View>
+                <FontAwesome5
+                  name="chevron-right"
+                  size={12}
+                  color={colors.textTertiary}
+                />
+              </TouchableOpacity>
+            ) : (
+              <View style={s.noContactRow}>
+                <FontAwesome5
+                  name="comment-slash"
+                  size={14}
+                  color={colors.textTertiary}
+                />
+                <Text style={s.noContactText}>
+                  {runner.name.split(' ')[0]} hasn't added Instagram yet.
+                </Text>
+              </View>
+            )}
           </View>
-          <View style={s.statDivider} />
-          <View style={s.statBlock}>
-            <Text style={s.statLabel}>DISTANCE</Text>
-            <Text style={s.statValue}>
-              {runner.distance_min}–{runner.distance_max} mi
-            </Text>
-          </View>
-        </View>
 
-        {/* About / Goals */}
-        {runner.bio || runner.goals ? (
-          <View style={s.section}>
-            <Text style={s.sectionLabel}>ABOUT</Text>
-            <Text style={s.bodyText}>{runner.bio || runner.goals}</Text>
+          {/* Stats */}
+          <View style={s.statsRow}>
+            <View style={s.statBlock}>
+              <Text style={s.statLabel}>PACE</Text>
+              <Text style={s.statValue}>{formatPace(runner.pace)}</Text>
+            </View>
+            <View style={s.statDivider} />
+            <View style={s.statBlock}>
+              <Text style={s.statLabel}>DISTANCE</Text>
+              <Text style={s.statValue}>
+                {runner.distance_min}–{runner.distance_max} mi
+              </Text>
+            </View>
           </View>
-        ) : null}
 
-        {/* Schedule */}
-        {runner.run_days?.length || runner.run_times?.length ? (
-          <View style={s.section}>
-            <Text style={s.sectionLabel}>SCHEDULE</Text>
-            {runner.run_days?.length ? (
+          {/* Schedule */}
+          {scheduleChips.length > 0 ? (
+            <View style={s.section}>
+              <Text style={s.sectionLabel}>SCHEDULE</Text>
               <View style={s.chipsWrap}>
-                {runner.run_days.map(day => (
-                  <View key={day} style={s.dayChip}>
-                    <Text style={s.dayChipText}>{day}</Text>
+                {scheduleChips.map(chip => (
+                  <View key={chip} style={s.chip}>
+                    <Text style={s.chipText}>{chip}</Text>
                   </View>
                 ))}
               </View>
-            ) : null}
-            {runner.run_times?.length ? (
-              <View style={[s.chipsWrap, { marginTop: 6 }]}>
-                {runner.run_times.map(time => (
-                  <View key={time} style={s.timeChip}>
-                    <Text style={s.timeChipText}>{time}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-          </View>
-        ) : null}
+            </View>
+          ) : null}
 
-        {/* Goals (if bio was shown above) */}
-        {runner.bio && runner.goals ? (
-          <View style={s.section}>
-            <Text style={s.sectionLabel}>GOALS</Text>
-            <Text style={s.bodyText}>{runner.goals}</Text>
-          </View>
-        ) : null}
+          {/* About */}
+          {runner.bio ? (
+            <View style={s.section}>
+              <Text style={s.sectionLabel}>ABOUT</Text>
+              <Text style={s.bodyText}>{runner.bio}</Text>
+            </View>
+          ) : null}
 
-        {/* Safety note */}
-        <View style={s.safetyNote}>
-          <FontAwesome5
-            name="shield-alt"
-            size={14}
-            color={colors.textTertiary}
-          />
-          <Text style={s.safetyText}>
-            Choose a public route and let someone know where you're going.
-          </Text>
+          {/* Goals */}
+          {runner.goals ? (
+            <View style={s.section}>
+              <Text style={s.sectionLabel}>GOALS</Text>
+              <Text style={s.bodyText}>{runner.goals}</Text>
+            </View>
+          ) : null}
+
+          <View style={s.safetyNote}>
+            <FontAwesome5
+              name="shield-alt"
+              size={13}
+              color={colors.textTertiary}
+            />
+            <Text style={s.safetyText}>
+              Choose a public route and let someone know where you're going.
+            </Text>
+          </View>
         </View>
       </ScrollView>
 
-      {/* Back button */}
       <View
         pointerEvents="box-none"
         style={{ position: 'absolute', top: insets.top + 8, left: 16 }}
@@ -300,7 +337,6 @@ const ConnectedRunnerScreen = () => {
         />
       </View>
 
-      {/* 3-dot menu */}
       <View
         pointerEvents="box-none"
         style={{ position: 'absolute', top: insets.top + 8, right: 16 }}
@@ -316,32 +352,63 @@ const ConnectedRunnerScreen = () => {
 }
 
 const s = StyleSheet.create({
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 60,
-  },
-  header: {
-    alignItems: 'center',
-    paddingBottom: 20,
-    gap: 8,
-  },
-  avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+  heroCard: {
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
+    minHeight: 320,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
   },
-  name: {
-    fontSize: 28,
-    fontWeight: '800',
+  heroWatermark: {
+    position: 'absolute',
+    right: -24,
+    top: -16,
+    opacity: 0.07,
+  },
+  heroContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    gap: 10,
+  },
+  connectedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.accent + '18',
+    borderRadius: radii.full,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  connectedBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.accent,
+  },
+  heroName: {
+    fontSize: 38,
+    fontWeight: '900',
     color: colors.textPrimary,
-    letterSpacing: -0.5,
-    textAlign: 'center',
+    letterSpacing: -1,
+  },
+  heroMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  paceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.accent,
+    borderRadius: radii.full,
+    paddingVertical: 5,
+    paddingHorizontal: 11,
+  },
+  paceBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.bg,
+    letterSpacing: -0.2,
   },
   locationRow: {
     flexDirection: 'row',
@@ -352,58 +419,86 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
   },
+
+  content: {
+    padding: 20,
+    gap: 12,
+    paddingBottom: 60,
+  },
+
   coordinateCard: {
     backgroundColor: colors.surface,
     borderRadius: radii.xl,
     borderWidth: 1.5,
-    borderColor: colors.accent + '55',
+    borderColor: colors.accent + '40',
     padding: 16,
-    marginBottom: 12,
-    gap: 12,
+    gap: 14,
   },
   coordinateHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    alignItems: 'flex-start',
+    gap: 10,
   },
   coordinateTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
-    color: colors.accent,
-    letterSpacing: 0.2,
+    color: colors.textPrimary,
+    letterSpacing: -0.1,
   },
-  instagramButton: {
-    backgroundColor: '#E1306C',
+  coordinateSubtitle: {
+    fontSize: 12,
+    color: colors.textTertiary,
+    marginTop: 2,
+  },
+  messageButton: {
+    backgroundColor: colors.elevated,
     borderRadius: radii.lg,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#E1306C33',
   },
-  instagramButtonLabel: {
-    fontSize: 15,
+  messageIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#E1306C',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  messageTitle: {
+    fontSize: 14,
     fontWeight: '700',
-    color: '#fff',
-    letterSpacing: -0.2,
+    color: colors.textPrimary,
+    letterSpacing: -0.1,
   },
-  instagramButtonHandle: {
+  messageHandle: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.75)',
-    marginTop: 1,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  noContactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 4,
   },
   noContactText: {
+    flex: 1,
     fontSize: 14,
     color: colors.textTertiary,
     fontStyle: 'italic',
   },
+
   statsRow: {
     flexDirection: 'row',
     backgroundColor: colors.surface,
     borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: colors.border,
-    marginBottom: 12,
     overflow: 'hidden',
   },
   statBlock: {
@@ -429,13 +524,13 @@ const s = StyleSheet.create({
     backgroundColor: colors.border,
     marginVertical: 12,
   },
+
   section: {
     backgroundColor: colors.surface,
     borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 16,
-    marginBottom: 12,
     gap: 10,
   },
   sectionLabel: {
@@ -454,29 +549,18 @@ const s = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 6,
   },
-  dayChip: {
+  chip: {
     backgroundColor: colors.elevated,
     borderRadius: radii.full,
     paddingVertical: 6,
     paddingHorizontal: 14,
   },
-  dayChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  timeChip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.full,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-  },
-  timeChipText: {
+  chipText: {
     fontSize: 13,
     fontWeight: '500',
-    color: colors.textSecondary,
+    color: colors.textPrimary,
   },
+
   safetyNote: {
     flexDirection: 'row',
     alignItems: 'flex-start',

@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native'
 
+import { LinearGradient } from 'expo-linear-gradient'
 import { useRouter } from 'expo-router'
 
 import { Host, ProgressView } from '@expo/ui/swift-ui'
@@ -40,6 +41,12 @@ type Section = {
   count: number
   isAccent: boolean
   data: SectionItem[]
+}
+
+const formatPace = (pace: number) => {
+  const m = Math.floor(pace)
+  const sec = Math.round((pace - m) * 60)
+  return `${m}:${sec.toString().padStart(2, '0')}/mi`
 }
 
 const ConnectionsScreen = () => {
@@ -165,7 +172,6 @@ const ConnectionsScreen = () => {
         .from('run_connections')
         .update({ status: 'accepted', updated_at: new Date().toISOString() })
         .eq('id', conn.id)
-
       if (error) throw error
       await fetchData()
       refreshPendingCount()
@@ -183,7 +189,6 @@ const ConnectionsScreen = () => {
         .from('run_connections')
         .delete()
         .eq('id', conn.id)
-
       if (error) throw error
       setSentRequests(prev => prev.filter(r => r.id !== conn.id))
     } catch {
@@ -200,7 +205,6 @@ const ConnectionsScreen = () => {
         .from('run_connections')
         .update({ status: 'declined', updated_at: new Date().toISOString() })
         .eq('id', conn.id)
-
       if (error) throw error
       setPendingRequests(prev => prev.filter(r => r.id !== conn.id))
       refreshPendingCount()
@@ -211,89 +215,121 @@ const ConnectionsScreen = () => {
     }
   }
 
-  const formatPace = (pace: number) => {
-    const m = Math.floor(pace)
-    const sec = Math.round((pace - m) * 60)
-    return `${m}:${sec.toString().padStart(2, '0')}/mi`
-  }
-
   const renderRequestCard = (req: PendingRequest) => (
-    <View style={s.requestCard}>
-      <View style={s.cardHeader}>
-        <View style={globalStyles.runnerAvatarRinged}>
-          <FontAwesome5 name="running" size={20} color={colors.accent} />
+    <View style={[s.card, s.requestCardBorder]}>
+      <FontAwesome5
+        name="running"
+        size={220}
+        color={colors.accent}
+        style={s.cardWatermark}
+      />
+      <LinearGradient
+        colors={['transparent', `${colors.accent}18`, colors.bg]}
+        locations={[0, 0.5, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={s.cardContent}>
+        <View style={s.requestBadge}>
+          <FontAwesome5 name="running" size={10} color={colors.accent} />
+          <Text style={s.requestBadgeText}>RUN REQUEST</Text>
         </View>
-        <View style={globalStyles.runnerHeaderText}>
-          <Text style={globalStyles.runnerName}>{req.requester.name}</Text>
-          <Text style={globalStyles.runnerNeighborhood}>
-            {req.requester.neighborhood}
-          </Text>
+        <View style={s.nameRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.cardName}>{req.requester.name}</Text>
+            {req.requester.neighborhood ? (
+              <View style={s.locationRow}>
+                <FontAwesome5
+                  name="map-marker-alt"
+                  size={11}
+                  color={colors.textSecondary}
+                />
+                <Text style={s.locationText}>{req.requester.neighborhood}</Text>
+              </View>
+            ) : null}
+          </View>
+          <View style={s.paceBadge}>
+            <FontAwesome5 name="bolt" size={9} color={colors.bg} />
+            <Text style={s.paceBadgeText}>
+              {formatPace(req.requester.pace)}
+            </Text>
+          </View>
         </View>
-      </View>
-
-      <View style={s.statsBar}>
-        <View style={s.statItem}>
-          <Text style={s.statLabel}>PACE</Text>
-          <Text style={s.statValueAccent}>
-            {formatPace(req.requester.pace)}
-          </Text>
+        <Text style={s.distanceText}>
+          {req.requester.distance_min}–{req.requester.distance_max}{' '}
+          <Text style={s.distanceUnit}>mi range</Text>
+        </Text>
+        <View style={s.actionRow}>
+          <TouchableOpacity
+            style={[s.actionBtn, s.acceptBtn]}
+            onPress={() => handleAccept(req)}
+            disabled={actingId === req.id}
+            activeOpacity={0.8}
+          >
+            <FontAwesome5 name="check" size={13} color={colors.bg} />
+            <Text style={s.acceptBtnText}>Accept</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.actionBtn, s.declineBtn]}
+            onPress={() => handleDecline(req)}
+            disabled={actingId === req.id}
+            activeOpacity={0.8}
+          >
+            <Text style={s.declineBtnText}>Decline</Text>
+          </TouchableOpacity>
         </View>
-        <View style={s.statDivider} />
-        <View style={s.statItem}>
-          <Text style={s.statLabel}>DISTANCE</Text>
-          <Text style={s.statValue}>
-            {req.requester.distance_min}–{req.requester.distance_max} mi
-          </Text>
-        </View>
-      </View>
-
-      <View style={s.actionRow}>
-        <TouchableOpacity
-          style={[s.actionBtn, s.acceptBtn]}
-          onPress={() => handleAccept(req)}
-          disabled={actingId === req.id}
-          activeOpacity={0.8}
-        >
-          <FontAwesome5 name="check" size={13} color={colors.bg} />
-          <Text style={s.acceptBtnText}>Accept</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[s.actionBtn, s.declineBtn]}
-          onPress={() => handleDecline(req)}
-          disabled={actingId === req.id}
-          activeOpacity={0.8}
-        >
-          <Text style={s.declineBtnText}>Decline</Text>
-        </TouchableOpacity>
       </View>
     </View>
   )
 
   const renderSentCard = (req: SentRequest) => (
-    <View style={[globalStyles.runnerCard, s.sentCard]}>
-      <View style={s.cardHeader}>
-        <View style={s.avatarMuted}>
-          <FontAwesome5 name="running" size={18} color={colors.textSecondary} />
-        </View>
-        <View style={globalStyles.runnerHeaderText}>
-          <Text style={globalStyles.runnerName}>{req.partner.name}</Text>
-          <Text style={globalStyles.runnerNeighborhood}>
-            {req.partner.neighborhood}
-          </Text>
-        </View>
+    <View style={[s.card, s.sentCardDim]}>
+      <FontAwesome5
+        name="running"
+        size={220}
+        color={colors.textTertiary}
+        style={s.cardWatermark}
+      />
+      <LinearGradient
+        colors={['transparent', 'rgba(13,13,13,0.55)', colors.bg]}
+        locations={[0, 0.5, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={s.cardContent}>
         <View style={s.pendingBadge}>
           <Text style={s.pendingBadgeText}>Pending</Text>
         </View>
+        <View style={s.nameRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.cardName}>{req.partner.name}</Text>
+            {req.partner.neighborhood ? (
+              <View style={s.locationRow}>
+                <FontAwesome5
+                  name="map-marker-alt"
+                  size={11}
+                  color={colors.textSecondary}
+                />
+                <Text style={s.locationText}>{req.partner.neighborhood}</Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+        <Text style={s.distanceText}>
+          {req.partner.distance_min}–{req.partner.distance_max}{' '}
+          <Text style={s.distanceUnit}>mi range</Text>
+        </Text>
+        <TouchableOpacity
+          style={s.cancelBar}
+          onPress={() => handleCancelSent(req)}
+          disabled={actingId === req.id}
+          activeOpacity={0.7}
+        >
+          <Text style={s.cancelBtnText}>Cancel request</Text>
+        </TouchableOpacity>
       </View>
-
-      <TouchableOpacity
-        style={s.cancelBtn}
-        onPress={() => handleCancelSent(req)}
-        disabled={actingId === req.id}
-        activeOpacity={0.7}
-      >
-        <Text style={s.cancelBtnText}>Cancel request</Text>
-      </TouchableOpacity>
     </View>
   )
 
@@ -306,56 +342,71 @@ const ConnectionsScreen = () => {
 
     return (
       <TouchableOpacity
-        style={s.connectionCard}
+        style={s.card}
         onPress={() => router.push(`/connected-runner/${partner.id}`)}
         activeOpacity={0.85}
       >
-        <View style={s.cardHeader}>
-          <View style={globalStyles.runnerAvatarRinged}>
-            <FontAwesome5 name="running" size={20} color={colors.accent} />
-          </View>
-          <View style={globalStyles.runnerHeaderText}>
-            <Text style={globalStyles.runnerName}>{partner.name}</Text>
-            <Text style={globalStyles.runnerNeighborhood}>
-              {partner.neighborhood}
-            </Text>
-          </View>
+        <FontAwesome5
+          name="running"
+          size={220}
+          color={colors.accent}
+          style={s.cardWatermark}
+        />
+        <LinearGradient
+          colors={['transparent', 'rgba(13,13,13,0.7)', colors.bg]}
+          locations={[0, 0.4, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={s.cardContent}>
           <View style={s.connectedBadge}>
             <FontAwesome5 name="users" size={10} color={colors.accent} />
             <Text style={s.connectedBadgeText}>Connected</Text>
           </View>
+          <View style={s.nameRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.cardName}>{partner.name}</Text>
+              {partner.neighborhood ? (
+                <View style={s.locationRow}>
+                  <FontAwesome5
+                    name="map-marker-alt"
+                    size={11}
+                    color={colors.textSecondary}
+                  />
+                  <Text style={s.locationText}>{partner.neighborhood}</Text>
+                </View>
+              ) : null}
+            </View>
+            <View style={s.paceBadge}>
+              <FontAwesome5 name="bolt" size={9} color={colors.bg} />
+              <Text style={s.paceBadgeText}>{formatPace(partner.pace)}</Text>
+            </View>
+          </View>
+          <Text style={s.distanceText}>
+            {partner.distance_min}–{partner.distance_max}{' '}
+            <Text style={s.distanceUnit}>mi range</Text>
+          </Text>
+          {scheduleChips.length > 0 ? (
+            <View style={s.chipsRow}>
+              {scheduleChips.slice(0, 5).map(chip => (
+                <View key={chip} style={s.chip}>
+                  <Text style={s.chipText}>{chip}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+          {partner.instagram ? (
+            <View style={s.instagramRow}>
+              <FontAwesome5 name="instagram" size={13} color="#E1306C" />
+              <Text style={s.instagramText}>{partner.instagram}</Text>
+            </View>
+          ) : null}
+          <View style={s.ctaBar}>
+            <FontAwesome5 name="running" size={15} color={colors.bg} />
+            <Text style={s.ctaBarText}>View Profile</Text>
+          </View>
         </View>
-
-        <View style={s.statsBar}>
-          <View style={s.statItem}>
-            <Text style={s.statLabel}>PACE</Text>
-            <Text style={s.statValueAccent}>{formatPace(partner.pace)}</Text>
-          </View>
-          <View style={s.statDivider} />
-          <View style={s.statItem}>
-            <Text style={s.statLabel}>DISTANCE</Text>
-            <Text style={s.statValue}>
-              {partner.distance_min}–{partner.distance_max} mi
-            </Text>
-          </View>
-        </View>
-
-        {scheduleChips.length > 0 ? (
-          <View style={globalStyles.runnerMetaRow}>
-            {scheduleChips.map(chip => (
-              <View key={chip} style={globalStyles.runnerChip}>
-                <Text style={globalStyles.runnerChipText}>{chip}</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        {partner.instagram ? (
-          <View style={s.instagramRow}>
-            <FontAwesome5 name="instagram" size={13} color="#E1306C" />
-            <Text style={s.instagramText}>{partner.instagram}</Text>
-          </View>
-        ) : null}
       </TouchableOpacity>
     )
   }
@@ -368,23 +419,11 @@ const ConnectionsScreen = () => {
 
   const renderSectionHeader = ({ section }: { section: Section }) => (
     <View style={globalStyles.sectionRow}>
-      <Text style={globalStyles.sectionTitle}>{section.title}</Text>
-      <View
-        style={
-          section.isAccent
-            ? globalStyles.countPillAccent
-            : globalStyles.countPill
-        }
-      >
-        <Text
-          style={
-            section.isAccent
-              ? globalStyles.countPillTextAccent
-              : globalStyles.countPillText
-          }
-        >
-          {section.count}
-        </Text>
+      <Text style={[globalStyles.sectionTitle, { marginBottom: 0 }]}>
+        {section.title}
+      </Text>
+      <View style={globalStyles.countPillAccent}>
+        <Text style={globalStyles.countPillTextAccent}>{section.count}</Text>
       </View>
     </View>
   )
@@ -487,13 +526,7 @@ const ConnectionsScreen = () => {
         { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 90 },
       ]}
       sections={sections}
-      keyExtractor={item =>
-        item.type === 'request'
-          ? item.payload.id
-          : item.type === 'sent'
-            ? item.payload.id
-            : item.payload.id
-      }
+      keyExtractor={item => item.payload.id}
       renderItem={renderItem}
       renderSectionHeader={renderSectionHeader}
       ListHeaderComponent={
@@ -512,83 +545,130 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 4,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  requestCard: {
+  card: {
     backgroundColor: colors.surface,
-    borderRadius: radii.xl,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.accent + '44',
-    gap: 10,
-  },
-  sentCard: {
-    opacity: 0.8,
-    gap: 10,
-  },
-  connectionCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.xl,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: radii.xxl,
+    overflow: 'hidden',
+    minHeight: 280,
+    marginBottom: 14,
+    justifyContent: 'flex-end',
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  requestCardBorder: {
+    borderColor: colors.accent + '33',
+  },
+  sentCardDim: {
+    opacity: 0.8,
+  },
+  cardWatermark: {
+    position: 'absolute',
+    right: -24,
+    top: -16,
+    opacity: 0.07,
+  },
+  cardContent: {
+    padding: 18,
+    gap: 8,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: 10,
   },
-  avatarMuted: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.elevated,
-    alignItems: 'center',
-    justifyContent: 'center',
+  cardName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
   },
-  statsBar: {
+  locationRow: {
     flexDirection: 'row',
-    backgroundColor: colors.elevated,
-    borderRadius: radii.lg,
-    overflow: 'hidden',
-  },
-  statItem: {
-    flex: 1,
     alignItems: 'center',
-    paddingVertical: 10,
-    gap: 3,
+    gap: 4,
+    marginTop: 3,
   },
-  statDivider: {
-    width: 1,
-    backgroundColor: colors.border,
-    marginVertical: 8,
+  locationText: {
+    fontSize: 13,
+    color: colors.textSecondary,
   },
-  statLabel: {
-    fontSize: 10,
+  paceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.accent,
+    borderRadius: radii.full,
+    paddingVertical: 5,
+    paddingHorizontal: 11,
+    marginTop: 2,
+  },
+  paceBadgeText: {
+    fontSize: 12,
     fontWeight: '700',
-    color: colors.textTertiary,
-    letterSpacing: 0.8,
+    color: colors.bg,
+    letterSpacing: -0.2,
   },
-  statValue: {
+  distanceText: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.textPrimary,
   },
-  statValueAccent: {
-    fontSize: 15,
+  distanceUnit: {
+    fontWeight: '400',
+    color: colors.textSecondary,
+  },
+  requestBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.accent + '20',
+    borderRadius: radii.full,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  requestBadgeText: {
+    fontSize: 11,
     fontWeight: '700',
     color: colors.accent,
-    letterSpacing: -0.3,
+    letterSpacing: 0.5,
+  },
+  pendingBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.elevated,
+    borderRadius: radii.full,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  pendingBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textTertiary,
+  },
+  connectedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.accent + '18',
+    borderRadius: radii.full,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  connectedBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.accent,
   },
   actionRow: {
     flexDirection: 'row',
     gap: 8,
+    marginTop: 4,
   },
   actionBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: radii.lg,
+    paddingVertical: 13,
+    borderRadius: radii.full,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -612,54 +692,61 @@ const s = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
   },
-  pendingBadge: {
-    backgroundColor: colors.elevated,
-    borderRadius: radii.full,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-  },
-  pendingBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textTertiary,
-  },
-  cancelBtn: {
+  cancelBar: {
     alignSelf: 'flex-start',
     paddingVertical: 7,
     paddingHorizontal: 14,
     borderRadius: radii.full,
     borderWidth: 1,
     borderColor: colors.border,
+    marginTop: 4,
   },
   cancelBtnText: {
     fontSize: 13,
     fontWeight: '500',
     color: colors.textSecondary,
   },
-  connectedBadge: {
+  chipsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: colors.accent + '18',
-    borderRadius: radii.full,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    flexWrap: 'wrap',
+    gap: 6,
   },
-  connectedBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.accent,
+  chip: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: radii.full,
+    backgroundColor: colors.elevated,
+  },
+  chipText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '500',
   },
   instagramRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingTop: 2,
   },
   instagramText: {
     fontSize: 14,
     fontWeight: '500',
     color: colors.textSecondary,
+  },
+  ctaBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.accent,
+    borderRadius: radii.full,
+    paddingVertical: 13,
+    marginTop: 4,
+  },
+  ctaBarText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.bg,
+    letterSpacing: -0.2,
   },
   emptyIcon: {
     width: 72,
