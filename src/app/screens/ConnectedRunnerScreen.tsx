@@ -20,6 +20,7 @@ import { FontAwesome5 } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import GlassIconButton from '../../components/GlassIconButton'
+import NeighborhoodMap from '../../components/NeighborhoodMap'
 import { supabase } from '../../lib/api/supabase'
 import type { Tables } from '../../types/supabase'
 import { globalStyles } from '../styles'
@@ -39,6 +40,19 @@ const formatPace = (pace: number) => {
   const m = Math.floor(pace)
   const sec = Math.round((pace - m) * 60)
   return `${m}:${sec.toString().padStart(2, '0')}/mi`
+}
+
+const getNeighborhoods = (runner: Runner) => {
+  const values = (runner.run_neighborhoods ?? []).map(value => value.trim())
+  const filtered = values.filter(Boolean)
+  if (filtered.length > 0) return Array.from(new Set(filtered))
+  return runner.neighborhood ? [runner.neighborhood] : []
+}
+
+const formatNeighborhoodSummary = (values: string[]) => {
+  if (values.length === 0) return ''
+  if (values.length === 1) return values[0]
+  return `${values[0]} +${values.length - 1} more`
 }
 
 const ConnectedRunnerScreen = () => {
@@ -171,6 +185,8 @@ const ConnectedRunnerScreen = () => {
     ...(runner.run_days ?? []),
     ...(runner.run_times ?? []),
   ]
+  const neighborhoods = getNeighborhoods(runner)
+  const neighborhoodSummary = formatNeighborhoodSummary(neighborhoods)
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -184,7 +200,7 @@ const ConnectedRunnerScreen = () => {
             style={s.heroWatermark}
           />
           <LinearGradient
-            colors={['transparent', 'rgba(13,13,13,0.7)', colors.bg]}
+            colors={['transparent', colors.overlayHeavy, colors.bg]}
             locations={[0, 0.4, 1]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
@@ -201,14 +217,14 @@ const ConnectedRunnerScreen = () => {
                 <FontAwesome5 name="bolt" size={9} color={colors.bg} />
                 <Text style={s.paceBadgeText}>{formatPace(runner.pace)}</Text>
               </View>
-              {runner.neighborhood ? (
+              {neighborhoodSummary ? (
                 <View style={s.locationRow}>
                   <FontAwesome5
                     name="map-marker-alt"
                     size={12}
                     color={colors.textSecondary}
                   />
-                  <Text style={s.locationText}>{runner.neighborhood}</Text>
+                  <Text style={s.locationText}>{neighborhoodSummary}</Text>
                 </View>
               ) : null}
             </View>
@@ -239,7 +255,11 @@ const ConnectedRunnerScreen = () => {
                 activeOpacity={0.8}
               >
                 <View style={s.messageIconWrap}>
-                  <FontAwesome5 name="instagram" size={18} color="#fff" />
+                  <FontAwesome5
+                    name="instagram"
+                    size={18}
+                    color={colors.textPrimary}
+                  />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.messageTitle}>Message on Instagram</Text>
@@ -269,18 +289,34 @@ const ConnectedRunnerScreen = () => {
             )}
           </View>
 
-          {/* Stats */}
-          <View style={s.statsRow}>
-            <View style={s.statBlock}>
-              <Text style={s.statLabel}>PACE</Text>
-              <Text style={s.statValue}>{formatPace(runner.pace)}</Text>
+          {/* Activity */}
+          <View style={s.activityCard}>
+            <View>
+              <NeighborhoodMap
+                neighborhood={runner.neighborhood ?? ''}
+                neighborhoods={runner.run_neighborhoods}
+                height={160}
+              />
+              <LinearGradient
+                colors={['transparent', colors.overlayMedium, colors.surface]}
+                locations={[0, 0.55, 1]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={s.mapGradient}
+              />
             </View>
-            <View style={s.statDivider} />
-            <View style={s.statBlock}>
-              <Text style={s.statLabel}>DISTANCE</Text>
-              <Text style={s.statValue}>
-                {runner.distance_min}–{runner.distance_max} mi
-              </Text>
+            <View style={s.statsRow}>
+              <View style={s.statBlock}>
+                <Text style={s.statLabel}>PACE</Text>
+                <Text style={s.statValue}>{formatPace(runner.pace)}</Text>
+              </View>
+              <View style={s.statDivider} />
+              <View style={s.statBlock}>
+                <Text style={s.statLabel}>DISTANCE</Text>
+                <Text style={s.statValue}>
+                  {runner.distance_min}–{runner.distance_max} mi
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -459,13 +495,13 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     borderWidth: 1,
-    borderColor: '#E1306C33',
+    borderColor: colors.instagram + '33',
   },
   messageIconWrap: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#E1306C',
+    backgroundColor: colors.instagram,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -493,13 +529,23 @@ const s = StyleSheet.create({
     fontStyle: 'italic',
   },
 
-  statsRow: {
-    flexDirection: 'row',
+  activityCard: {
     backgroundColor: colors.surface,
     borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
+  },
+  mapGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 56,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    marginTop: -1,
   },
   statBlock: {
     flex: 1,

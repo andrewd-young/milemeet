@@ -292,7 +292,7 @@ const ConnectionsScreen = () => {
         style={s.cardWatermark}
       />
       <LinearGradient
-        colors={['transparent', 'rgba(13,13,13,0.55)', colors.bg]}
+        colors={['transparent', colors.overlayMedium, colors.bg]}
         locations={[0, 0.5, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
@@ -318,7 +318,7 @@ const ConnectionsScreen = () => {
           </View>
         </View>
         <Text style={s.distanceText}>
-          {req.partner.distance_min}–{req.partner.distance_max}{' '}
+          {req.partner.distance_min}-{req.partner.distance_max}{' '}
           <Text style={s.distanceUnit}>mi range</Text>
         </Text>
         <TouchableOpacity
@@ -353,7 +353,7 @@ const ConnectionsScreen = () => {
           style={s.cardWatermark}
         />
         <LinearGradient
-          colors={['transparent', 'rgba(13,13,13,0.7)', colors.bg]}
+          colors={['transparent', colors.overlayHeavy, colors.bg]}
           locations={[0, 0.4, 1]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
@@ -398,7 +398,11 @@ const ConnectionsScreen = () => {
           ) : null}
           {partner.instagram ? (
             <View style={s.instagramRow}>
-              <FontAwesome5 name="instagram" size={13} color="#E1306C" />
+              <FontAwesome5
+                name="instagram"
+                size={13}
+                color={colors.instagram}
+              />
               <Text style={s.instagramText}>{partner.instagram}</Text>
             </View>
           ) : null}

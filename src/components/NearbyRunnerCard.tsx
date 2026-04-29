@@ -38,7 +38,7 @@ const NearbyRunnerCard = ({ runner, onPress }: NearbyRunnerCardProps) => {
       />
 
       <LinearGradient
-        colors={['transparent', 'rgba(13,13,13,0.7)', colors.bg]}
+        colors={['transparent', colors.overlayHeavy, colors.bg]}
         locations={[0, 0.4, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}

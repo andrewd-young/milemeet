@@ -657,7 +657,7 @@ const s = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.elevatedPlus,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -675,7 +675,7 @@ const s = StyleSheet.create({
   },
   stepperDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
+    backgroundColor: colors.borderSubtle,
     marginHorizontal: 14,
   },
   chipGrid: {
@@ -689,10 +689,10 @@ const s = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: colors.elevated,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
   },
   chipSelected: {
-    backgroundColor: '#1C2010',
+    backgroundColor: colors.accentSubtle,
     borderColor: colors.accent,
   },
   chipText: {
@@ -724,7 +724,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.elevated,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
     paddingHorizontal: 14,
     height: 48,
     marginTop: 12,

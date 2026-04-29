@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#1C2010',
+    backgroundColor: colors.accentSubtle,
     borderWidth: 1,
     borderColor: colors.accent,
     borderRadius: radii.full,

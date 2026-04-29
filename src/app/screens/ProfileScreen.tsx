@@ -71,6 +71,19 @@ const timeMeta = (time: string): { abbrev: string; icon: string } => {
   return { abbrev: 'NIGHT', icon: 'moon' }
 }
 
+const getNeighborhoods = (runner: Runner) => {
+  const values = (runner.run_neighborhoods ?? []).map(value => value.trim())
+  const filtered = values.filter(Boolean)
+  if (filtered.length > 0) return Array.from(new Set(filtered))
+  return runner.neighborhood ? [runner.neighborhood] : []
+}
+
+const formatNeighborhoodSummary = (values: string[]) => {
+  if (values.length === 0) return ''
+  if (values.length === 1) return values[0]
+  return `${values[0]} +${values.length - 1} more`
+}
+
 const ProfileScreen = () => {
   const insets = useSafeAreaInsets()
   const router = useRouter()
@@ -158,6 +171,8 @@ const ProfileScreen = () => {
 
   const days = runner.run_days ?? []
   const times = runner.run_times ?? []
+  const neighborhoods = getNeighborhoods(runner)
+  const neighborhoodSummary = formatNeighborhoodSummary(neighborhoods)
   const scheduleChips =
     days.length && times.length
       ? days.flatMap(day =>
@@ -201,14 +216,14 @@ const ProfileScreen = () => {
                   {formatPace(runner.pace)}/mi
                 </Text>
               </View>
-              {runner.neighborhood ? (
+              {neighborhoodSummary ? (
                 <View style={s.locationRow}>
                   <FontAwesome5
                     name="map-marker-alt"
                     size={12}
                     color={colors.textSecondary}
                   />
-                  <Text style={s.locationText}>{runner.neighborhood}</Text>
+                  <Text style={s.locationText}>{neighborhoodSummary}</Text>
                 </View>
               ) : null}
             </View>
@@ -231,10 +246,12 @@ const ProfileScreen = () => {
               <View>
                 <NeighborhoodMap
                   neighborhood={runner.neighborhood ?? ''}
+                  neighborhoods={runner.run_neighborhoods}
                   height={180}
                 />
                 <LinearGradient
-                  colors={['transparent', colors.surface]}
+                  colors={['transparent', colors.overlayMedium, colors.surface]}
+                  locations={[0, 0.55, 1]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 0, y: 1 }}
                   style={s.mapGradient}

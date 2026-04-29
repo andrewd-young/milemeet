@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   },
   paceRowSelected: {
     borderColor: colors.accent,
-    backgroundColor: '#1C2010',
+    backgroundColor: colors.accentSubtle,
   },
   paceIconWrap: {
     width: 36,

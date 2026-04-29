@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   },
   error: {
     marginTop: 10,
-    color: '#FF6B6B',
+    color: colors.error,
     fontSize: 13,
   },
   resendButton: {

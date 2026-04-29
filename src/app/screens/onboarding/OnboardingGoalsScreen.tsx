@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   presetChipSelected: {
-    backgroundColor: '#1C2010',
+    backgroundColor: colors.accentSubtle,
     borderColor: colors.accent,
   },
   presetChipText: {
