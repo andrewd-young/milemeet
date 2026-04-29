@@ -6,6 +6,7 @@ import React, {
   useState,
 } from 'react'
 
+import { useMyRunner } from '../../context/MyRunnerContext'
 import { supabase } from '../../lib/api/supabase'
 
 type ConnectionsContextValue = {
@@ -19,39 +20,25 @@ const ConnectionsContext = createContext<ConnectionsContextValue>({
 })
 
 export const ConnectionsProvider = ({ children }: { children: ReactNode }) => {
+  const { myRunner } = useMyRunner()
   const [pendingCount, setPendingCount] = useState(0)
 
   const refreshPendingCount = useCallback(async () => {
+    if (!myRunner) {
+      setPendingCount(0)
+      return
+    }
     try {
-      const { data: authData } = await supabase.auth.getUser()
-      const userId = authData.user?.id
-      if (!userId) {
-        setPendingCount(0)
-        return
-      }
-
-      const { data: me } = await supabase
-        .from('runners')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle()
-
-      if (!me) {
-        setPendingCount(0)
-        return
-      }
-
       const { count } = await supabase
         .from('run_connections')
         .select('id', { count: 'exact', head: true })
-        .eq('partner_runner_id', me.id)
+        .eq('partner_runner_id', myRunner.id)
         .eq('status', 'pending')
-
       setPendingCount(count ?? 0)
     } catch {
       // non-critical — badge just won't update
     }
-  }, [])
+  }, [myRunner])
 
   return (
     <ConnectionsContext.Provider value={{ pendingCount, refreshPendingCount }}>

@@ -15,7 +15,11 @@ export default function TabsLayout() {
   const badgeValue = pendingCount > 0 ? String(pendingCount) : undefined
 
   return (
-    <NativeTabs tintColor={colors.accent}>
+    <NativeTabs
+      tintColor={colors.accent}
+      disableTransparentOnScrollEdge
+      blurEffect="systemUltraThinMaterialDark"
+    >
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Icon sf="figure.run" />
         <NativeTabs.Trigger.Label>Runners</NativeTabs.Trigger.Label>

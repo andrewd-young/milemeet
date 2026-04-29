@@ -62,6 +62,89 @@ export type Database = {
           },
         ]
       }
+      runner_integrations: {
+        Row: {
+          id: string
+          runner_id: string
+          strava_access_token: string | null
+          strava_athlete_id: number | null
+          strava_athlete_name: string | null
+          strava_refresh_token: string | null
+          strava_scope: string | null
+          strava_token_expires_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          runner_id: string
+          strava_access_token?: string | null
+          strava_athlete_id?: number | null
+          strava_athlete_name?: string | null
+          strava_refresh_token?: string | null
+          strava_scope?: string | null
+          strava_token_expires_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          runner_id?: string
+          strava_access_token?: string | null
+          strava_athlete_id?: number | null
+          strava_athlete_name?: string | null
+          strava_refresh_token?: string | null
+          strava_scope?: string | null
+          strava_token_expires_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'runner_integrations_runner_id_fkey'
+            columns: ['runner_id']
+            isOneToOne: true
+            referencedRelation: 'runners'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      runner_messages: {
+        Row: {
+          body: string
+          connection_id: string
+          id: string
+          sender_runner_id: string
+          sent_at: string
+        }
+        Insert: {
+          body: string
+          connection_id: string
+          id?: string
+          sender_runner_id: string
+          sent_at?: string
+        }
+        Update: {
+          body?: string
+          connection_id?: string
+          id?: string
+          sender_runner_id?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'runner_messages_connection_id_fkey'
+            columns: ['connection_id']
+            isOneToOne: false
+            referencedRelation: 'run_connections'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'runner_messages_sender_runner_id_fkey'
+            columns: ['sender_runner_id']
+            isOneToOne: false
+            referencedRelation: 'runners'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       runners: {
         Row: {
           bio: string | null
@@ -84,6 +167,7 @@ export type Database = {
           run_times: string[] | null
           strava: string | null
           strava_public: boolean
+          strava_verified: boolean
           updated_at: string | null
           user_id: string | null
         }
@@ -108,6 +192,7 @@ export type Database = {
           run_times?: string[] | null
           strava?: string | null
           strava_public?: boolean
+          strava_verified?: boolean
           updated_at?: string | null
           user_id?: string | null
         }
@@ -132,6 +217,7 @@ export type Database = {
           run_times?: string[] | null
           strava?: string | null
           strava_public?: boolean
+          strava_verified?: boolean
           updated_at?: string | null
           user_id?: string | null
         }

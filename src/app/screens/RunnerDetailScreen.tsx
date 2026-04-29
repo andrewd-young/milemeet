@@ -8,7 +8,6 @@ import {
   View,
 } from 'react-native'
 
-import { LinearGradient } from 'expo-linear-gradient'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 
 import { Host, ProgressView } from '@expo/ui/swift-ui'
@@ -17,8 +16,15 @@ import { FontAwesome5 } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import GlassIconButton from '../../components/GlassIconButton'
-import NeighborhoodMap from '../../components/NeighborhoodMap'
+import RunnerActivityCard from '../../components/RunnerActivityCard'
+import RunnerHero from '../../components/RunnerHero'
+import { useMyRunner } from '../../context/MyRunnerContext'
 import { supabase } from '../../lib/api/supabase'
+import { buildScheduleChips } from '../../lib/helpers/formatters'
+import {
+  isGoalMatch,
+  isScheduleChipMatch,
+} from '../../lib/helpers/matchHelpers'
 import type { Tables } from '../../types/supabase'
 import { globalStyles } from '../styles'
 import { colors, radii } from '../theme'
@@ -40,51 +46,13 @@ type ConnectionStatus =
   | 'accepted'
   | 'declined_sent'
 
-const formatPace = (pace: number) => {
-  const m = Math.floor(pace)
-  const sec = Math.round((pace - m) * 60)
-  return `${m}:${sec.toString().padStart(2, '0')}`
-}
-
-const timeMeta = (time: string): { abbrev: string; icon: string } => {
-  const t = time.toLowerCase().trim()
-  if (
-    t === 'morning' ||
-    t.includes('morning') ||
-    t.includes('am') ||
-    t.includes('early')
-  )
-    return { abbrev: 'MORNING', icon: 'coffee' }
-  if (
-    t === 'noon' ||
-    t.includes('noon') ||
-    t.includes('afternoon') ||
-    t.includes('midday')
-  )
-    return { abbrev: 'NOON', icon: 'sun' }
-  return { abbrev: 'NIGHT', icon: 'moon' }
-}
-
-const getNeighborhoods = (runner: Runner) => {
-  const values = (runner.run_neighborhoods ?? []).map(value => value.trim())
-  const filtered = values.filter(Boolean)
-  if (filtered.length > 0) return Array.from(new Set(filtered))
-  return runner.neighborhood ? [runner.neighborhood] : []
-}
-
-const formatNeighborhoodSummary = (values: string[]) => {
-  if (values.length === 0) return ''
-  if (values.length === 1) return values[0]
-  return `${values[0]} +${values.length - 1} more`
-}
-
 const RunnerDetailScreen = () => {
   const { id: runnerId } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
 
+  const { myRunner } = useMyRunner()
   const [runner, setRunner] = useState<Runner | null>(null)
-  const [myRunner, setMyRunner] = useState<Runner | null>(null)
   const [connection, setConnection] = useState<Connection | null>(null)
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>('none')
@@ -100,40 +68,29 @@ const RunnerDetailScreen = () => {
     setIsLoading(true)
     setErrorMessage(null)
     try {
-      const [runnerResult, authResult] = await Promise.all([
-        supabase.from('runners').select('*').eq('id', runnerId).maybeSingle(),
-        supabase.auth.getUser(),
-      ])
-
-      if (runnerResult.error) throw runnerResult.error
-      if (!runnerResult.data) throw new Error('Runner not found')
-      setRunner(runnerResult.data)
-
-      const userId = authResult.data.user?.id
-      if (!userId) return
-
-      const { data: me } = await supabase
+      const { data, error } = await supabase
         .from('runners')
         .select('*')
-        .eq('user_id', userId)
+        .eq('id', runnerId)
         .maybeSingle()
 
-      if (!me) return
-      setMyRunner(me)
+      if (error) throw error
+      if (!data) throw new Error('Runner not found')
+      setRunner(data)
 
-      if (me.id === runnerId) return
+      if (!myRunner || myRunner.id === runnerId) return
 
       const { data: conn } = await supabase
         .from('run_connections')
         .select('*')
         .or(
-          `and(owner_runner_id.eq.${me.id},partner_runner_id.eq.${runnerId}),` +
-            `and(owner_runner_id.eq.${runnerId},partner_runner_id.eq.${me.id})`,
+          `and(owner_runner_id.eq.${myRunner.id},partner_runner_id.eq.${runnerId}),` +
+            `and(owner_runner_id.eq.${runnerId},partner_runner_id.eq.${myRunner.id})`,
         )
         .maybeSingle()
 
       setConnection(conn ?? null)
-      setConnectionStatus(deriveStatus(conn ?? null, me.id))
+      setConnectionStatus(deriveStatus(conn ?? null, myRunner.id))
     } catch (error) {
       if (__DEV__) console.error('[RunnerDetail] load error:', error)
       setErrorMessage(extractMessage(error))
@@ -148,9 +105,8 @@ const RunnerDetailScreen = () => {
   ): ConnectionStatus => {
     if (!conn) return 'none'
     if (conn.status === 'accepted') return 'accepted'
-    if (conn.status === 'pending') {
+    if (conn.status === 'pending')
       return conn.owner_runner_id === myId ? 'pending_sent' : 'pending_received'
-    }
     if (conn.status === 'declined' && conn.owner_runner_id === myId)
       return 'declined_sent'
     return 'none'
@@ -166,7 +122,6 @@ const RunnerDetailScreen = () => {
     if (!runner) return
     setIsActing(true)
     setErrorMessage(null)
-
     try {
       if (connectionStatus === 'none' || connectionStatus === 'declined_sent') {
         const { data, error } = await supabase
@@ -178,7 +133,6 @@ const RunnerDetailScreen = () => {
           })
           .select()
           .single()
-
         if (error) throw error
         setConnection(data)
         setConnectionStatus('pending_sent')
@@ -189,7 +143,6 @@ const RunnerDetailScreen = () => {
           .eq('id', connection.id)
           .select()
           .single()
-
         if (error) throw error
         setConnection(data)
         setConnectionStatus('accepted')
@@ -270,22 +223,20 @@ const RunnerDetailScreen = () => {
   const isOwnProfile = myRunner?.id === runnerId
   const cta = ctaConfig()
 
-  const days = runner.run_days ?? []
-  const times = runner.run_times ?? []
-  const neighborhoods = getNeighborhoods(runner)
-  const neighborhoodSummary = formatNeighborhoodSummary(neighborhoods)
-  const scheduleChips =
-    days.length && times.length
-      ? days.flatMap(day =>
-          times.map(time => {
-            const meta = timeMeta(time)
-            return {
-              label: `${day.toUpperCase()} ${meta.abbrev}`,
-              icon: meta.icon,
-            }
-          }),
-        )
-      : days.map(day => ({ label: day.toUpperCase(), icon: '' }))
+  const scheduleChips = buildScheduleChips(
+    runner.run_days ?? [],
+    runner.run_times ?? [],
+  )
+  const goalChips = runner.goals
+    ? runner.goals
+        .split(',')
+        .map(g => g.trim())
+        .filter(Boolean)
+    : []
+  const racesAndClubs = [
+    ...(runner.past_races ?? []),
+    ...(runner.run_clubs ?? []),
+  ]
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -293,46 +244,14 @@ const RunnerDetailScreen = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: isOwnProfile ? 40 : 120 }}
       >
-        {/* Hero — full bleed, paddingTop = safe area inset */}
-        <View style={[s.hero, { paddingTop: insets.top + 16 }]}>
-          <FontAwesome5
-            name="running"
-            size={160}
-            color={colors.accent}
-            style={s.heroWatermark}
-          />
-          <LinearGradient
-            colors={['transparent', colors.overlayLight, colors.bg]}
-            locations={[0, 0.65, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={s.heroGradient}
-          />
-          <View style={s.heroBottom}>
-            <Text style={s.heroName}>{runner.name}</Text>
-            <View style={s.heroMeta}>
-              <View style={s.paceBadge}>
-                <FontAwesome5 name="bolt" size={10} color={colors.bg} />
-                <Text style={s.paceBadgeText}>
-                  {formatPace(runner.pace)}/mi
-                </Text>
-              </View>
-              {neighborhoodSummary ? (
-                <View style={s.locationRow}>
-                  <FontAwesome5
-                    name="map-marker-alt"
-                    size={12}
-                    color={colors.textSecondary}
-                  />
-                  <Text style={s.locationText}>{neighborhoodSummary}</Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-        </View>
+        <RunnerHero
+          runner={runner}
+          myRunner={isOwnProfile ? undefined : (myRunner ?? undefined)}
+          paddingTop={insets.top + 16}
+          minHeight={360}
+        />
 
         <View style={s.content}>
-          {/* About */}
           {runner.bio ? (
             <View style={s.section}>
               <Text style={s.sectionHeading}>About</Text>
@@ -340,96 +259,72 @@ const RunnerDetailScreen = () => {
             </View>
           ) : null}
 
-          {/* Recent Activity */}
           <View style={s.section}>
-            <Text style={s.sectionHeading}>Recent Activity</Text>
-            <View style={s.activityCard}>
-              <View>
-                <NeighborhoodMap
-                  neighborhood={runner.neighborhood ?? ''}
-                  neighborhoods={runner.run_neighborhoods}
-                  height={180}
-                />
-                <LinearGradient
-                  colors={['transparent', colors.overlayMedium, colors.surface]}
-                  locations={[0, 0.55, 1]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 0, y: 1 }}
-                  style={s.mapGradient}
-                />
-              </View>
-              <View style={s.activityStats}>
-                <View style={s.activityStat}>
-                  <Text style={s.activityStatLabel}>DISTANCE</Text>
-                  <View style={s.activityStatRow}>
-                    <Text style={s.activityStatValueAccent}>
-                      {runner.distance_max}
-                    </Text>
-                    <Text style={s.activityStatUnit}>mi</Text>
-                  </View>
-                </View>
-                <View style={s.activityStat}>
-                  <Text style={s.activityStatLabel}>AVG PACE</Text>
-                  <View style={s.activityStatRow}>
-                    <Text style={s.activityStatValue}>
-                      {formatPace(runner.pace)}
-                    </Text>
-                    <Text style={s.activityStatUnit}>/mi</Text>
-                  </View>
-                </View>
-                <View style={s.activityStat}>
-                  <Text style={s.activityStatLabel}>DAYS/WK</Text>
-                  <View style={s.activityStatRow}>
-                    <Text style={s.activityStatValue}>
-                      {runner.run_days?.length ?? '—'}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
+            <Text style={s.sectionHeading}>Activity</Text>
+            <RunnerActivityCard runner={runner} />
           </View>
 
-          {/* Schedule */}
           {scheduleChips.length > 0 ? (
             <View style={s.section}>
               <Text style={s.sectionHeading}>Schedule</Text>
               <View style={s.chipsRow}>
-                {scheduleChips.map((chip, i) => (
-                  <View key={i} style={s.scheduleChip}>
-                    {chip.icon ? (
-                      <FontAwesome5
-                        name={chip.icon as any}
-                        size={12}
-                        color={colors.accent}
-                        solid
-                      />
-                    ) : null}
-                    <Text style={s.scheduleChipText}>{chip.label}</Text>
+                {scheduleChips.map((chip, i) => {
+                  const matched =
+                    !isOwnProfile &&
+                    !!myRunner &&
+                    isScheduleChipMatch(myRunner, chip.day, chip.time)
+                  return (
+                    <View key={i} style={[s.chip, matched && s.chipMatch]}>
+                      {chip.icon ? (
+                        <FontAwesome5
+                          name={chip.icon as any}
+                          size={12}
+                          color={matched ? colors.accentDim : colors.accent}
+                          solid
+                        />
+                      ) : null}
+                      <Text style={[s.chipText, matched && s.chipTextMatch]}>
+                        {chip.label}
+                      </Text>
+                    </View>
+                  )
+                })}
+              </View>
+            </View>
+          ) : null}
+
+          {goalChips.length > 0 ? (
+            <View style={s.section}>
+              <Text style={s.sectionHeading}>Goals</Text>
+              <View style={s.chipsRow}>
+                {goalChips.map(goal => {
+                  const matched =
+                    !isOwnProfile && !!myRunner && isGoalMatch(myRunner, goal)
+                  return (
+                    <View key={goal} style={[s.chip, matched && s.chipMatch]}>
+                      <Text style={[s.chipText, matched && s.chipTextMatch]}>
+                        {goal}
+                      </Text>
+                    </View>
+                  )
+                })}
+              </View>
+            </View>
+          ) : null}
+
+          {racesAndClubs.length > 0 ? (
+            <View style={s.section}>
+              <Text style={s.sectionHeading}>Races & Clubs</Text>
+              <View style={s.chipsRow}>
+                {racesAndClubs.map(tag => (
+                  <View key={tag} style={s.chip}>
+                    <Text style={s.chipText}>{tag}</Text>
                   </View>
                 ))}
               </View>
             </View>
           ) : null}
 
-          {/* Goals */}
-          {runner.goals ? (
-            <View style={s.section}>
-              <Text style={s.sectionHeading}>Goals</Text>
-              <View style={s.chipsRow}>
-                {runner.goals
-                  .split(',')
-                  .map(g => g.trim())
-                  .filter(Boolean)
-                  .map((goal, i) => (
-                    <View key={i} style={s.goalChip}>
-                      <Text style={s.goalChipText}>{goal}</Text>
-                    </View>
-                  ))}
-              </View>
-            </View>
-          ) : null}
-
-          {/* Contact — only for accepted connections */}
           {connectionStatus === 'accepted' && runner.instagram ? (
             <View style={s.section}>
               <Text style={s.sectionHeading}>Coordinate</Text>
@@ -509,66 +404,6 @@ const RunnerDetailScreen = () => {
 }
 
 const s = StyleSheet.create({
-  hero: {
-    backgroundColor: colors.surface,
-    minHeight: 420,
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  heroWatermark: {
-    position: 'absolute',
-    right: -20,
-    bottom: 10,
-    opacity: 0.07,
-  },
-  heroGradient: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  },
-  heroBottom: {
-    gap: 10,
-  },
-  heroName: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: colors.textPrimary,
-    letterSpacing: -1.2,
-  },
-  heroMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  paceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: colors.accent,
-    borderRadius: radii.full,
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-  },
-  paceBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.bg,
-    letterSpacing: 0.3,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  locationText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-
   content: {
     paddingHorizontal: 20,
     paddingTop: 28,
@@ -588,68 +423,12 @@ const s = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 23,
   },
-
-  activityCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.xl,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  mapGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 56,
-  },
-  activityStats: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  activityStat: {
-    flex: 1,
-    gap: 4,
-  },
-  activityStatLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textTertiary,
-    letterSpacing: 0.8,
-  },
-  activityStatRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-  activityStatValueAccent: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: colors.accent,
-    letterSpacing: -0.8,
-    lineHeight: 30,
-  },
-  activityStatValue: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    letterSpacing: -0.5,
-    lineHeight: 26,
-  },
-  activityStatUnit: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textSecondary,
-    paddingBottom: 2,
-  },
-
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  scheduleChip: {
+  chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -658,23 +437,18 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
   },
-  scheduleChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textPrimary,
+  chipMatch: {
+    backgroundColor: colors.accentSubtle,
   },
-  goalChip: {
-    backgroundColor: colors.elevated,
-    borderRadius: radii.full,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  goalChipText: {
+  chipText: {
     fontSize: 13,
     fontWeight: '500',
     color: colors.textPrimary,
   },
-
+  chipTextMatch: {
+    color: colors.accentDim,
+    fontWeight: '700',
+  },
   contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -685,7 +459,6 @@ const s = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
   },
-
   safetyRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -698,7 +471,6 @@ const s = StyleSheet.create({
     color: colors.textTertiary,
     lineHeight: 18,
   },
-
   footer: {
     paddingHorizontal: 20,
     paddingTop: 12,

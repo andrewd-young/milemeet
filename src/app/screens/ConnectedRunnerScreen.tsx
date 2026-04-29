@@ -11,7 +11,6 @@ import {
   View,
 } from 'react-native'
 
-import { LinearGradient } from 'expo-linear-gradient'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 
 import { Host, ProgressView } from '@expo/ui/swift-ui'
@@ -20,8 +19,12 @@ import { FontAwesome5 } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import GlassIconButton from '../../components/GlassIconButton'
-import NeighborhoodMap from '../../components/NeighborhoodMap'
+import RunnerActivityCard from '../../components/RunnerActivityCard'
+import RunnerHero from '../../components/RunnerHero'
+import { useMyRunner } from '../../context/MyRunnerContext'
 import { supabase } from '../../lib/api/supabase'
+import { formatPace } from '../../lib/helpers/formatters'
+import { isGoalMatch } from '../../lib/helpers/matchHelpers'
 import type { Tables } from '../../types/supabase'
 import { globalStyles } from '../styles'
 import { colors, radii } from '../theme'
@@ -36,30 +39,12 @@ const extractMessage = (err: unknown): string => {
   return 'Something went wrong'
 }
 
-const formatPace = (pace: number) => {
-  const m = Math.floor(pace)
-  const sec = Math.round((pace - m) * 60)
-  return `${m}:${sec.toString().padStart(2, '0')}/mi`
-}
-
-const getNeighborhoods = (runner: Runner) => {
-  const values = (runner.run_neighborhoods ?? []).map(value => value.trim())
-  const filtered = values.filter(Boolean)
-  if (filtered.length > 0) return Array.from(new Set(filtered))
-  return runner.neighborhood ? [runner.neighborhood] : []
-}
-
-const formatNeighborhoodSummary = (values: string[]) => {
-  if (values.length === 0) return ''
-  if (values.length === 1) return values[0]
-  return `${values[0]} +${values.length - 1} more`
-}
-
 const ConnectedRunnerScreen = () => {
   const { id: runnerId } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
 
+  const { myRunner } = useMyRunner()
   const [runner, setRunner] = useState<Runner | null>(null)
   const [connection, setConnection] = useState<Connection | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -72,32 +57,24 @@ const ConnectedRunnerScreen = () => {
   const load = async () => {
     setIsLoading(true)
     try {
-      const [runnerResult, authResult] = await Promise.all([
-        supabase.from('runners').select('*').eq('id', runnerId).maybeSingle(),
-        supabase.auth.getUser(),
-      ])
-
-      if (runnerResult.error) throw runnerResult.error
-      if (!runnerResult.data) throw new Error('Runner not found')
-      setRunner(runnerResult.data)
-
-      const userId = authResult.data.user?.id
-      if (!userId) return
-
-      const { data: me } = await supabase
+      const { data, error } = await supabase
         .from('runners')
-        .select('id')
-        .eq('user_id', userId)
+        .select('*')
+        .eq('id', runnerId)
         .maybeSingle()
 
-      if (!me) return
+      if (error) throw error
+      if (!data) throw new Error('Runner not found')
+      setRunner(data)
+
+      if (!myRunner) return
 
       const { data: conn } = await supabase
         .from('run_connections')
         .select('*')
         .or(
-          `and(owner_runner_id.eq.${me.id},partner_runner_id.eq.${runnerId}),` +
-            `and(owner_runner_id.eq.${runnerId},partner_runner_id.eq.${me.id})`,
+          `and(owner_runner_id.eq.${myRunner.id},partner_runner_id.eq.${runnerId}),` +
+            `and(owner_runner_id.eq.${runnerId},partner_runner_id.eq.${myRunner.id})`,
         )
         .eq('status', 'accepted')
         .maybeSingle()
@@ -116,6 +93,10 @@ const ConnectedRunnerScreen = () => {
     const webUrl = `https://instagram.com/${username}`
     const canOpen = await Linking.canOpenURL(appUrl)
     Linking.openURL(canOpen ? appUrl : webUrl)
+  }
+
+  const openLinkedIn = (url: string) => {
+    Linking.openURL(url.startsWith('http') ? url : `https://${url}`)
   }
 
   const handleMenu = () => {
@@ -185,54 +166,52 @@ const ConnectedRunnerScreen = () => {
     ...(runner.run_days ?? []),
     ...(runner.run_times ?? []),
   ]
-  const neighborhoods = getNeighborhoods(runner)
-  const neighborhoodSummary = formatNeighborhoodSummary(neighborhoods)
+  const goalChips = runner.goals
+    ? runner.goals
+        .split(',')
+        .map(g => g.trim())
+        .filter(Boolean)
+    : []
+  const racesAndClubs = [
+    ...(runner.past_races ?? []),
+    ...(runner.run_clubs ?? []),
+  ]
+
+  const myDays = new Set(myRunner?.run_days ?? [])
+  const myTimes = new Set(myRunner?.run_times ?? [])
+  const scheduleChipMatch = (chip: string) =>
+    myDays.has(chip) || myTimes.has(chip)
+
+  const connectedBadge = (
+    <View style={s.connectedBadge}>
+      <FontAwesome5 name="users" size={10} color={colors.accent} />
+      <Text style={s.connectedBadgeText}>Connected</Text>
+    </View>
+  )
+
+  const activityStats = [
+    { label: 'PACE', value: `${formatPace(runner.pace)}/mi`, accent: true },
+    {
+      label: 'DISTANCE',
+      value: `${runner.distance_min}–${runner.distance_max} mi`,
+    },
+  ]
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Hero — full-bleed, same language as NearbyRunnerCard */}
-        <View style={s.heroCard}>
-          <FontAwesome5
-            name="running"
-            size={220}
-            color={colors.accent}
-            style={s.heroWatermark}
-          />
-          <LinearGradient
-            colors={['transparent', colors.overlayHeavy, colors.bg]}
-            locations={[0, 0.4, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={[s.heroContent, { paddingTop: insets.top + 64 }]}>
-            <View style={s.connectedBadge}>
-              <FontAwesome5 name="users" size={10} color={colors.accent} />
-              <Text style={s.connectedBadgeText}>Connected</Text>
-            </View>
-            <Text style={s.heroName}>{runner.name}</Text>
-            <View style={s.heroMeta}>
-              <View style={s.paceBadge}>
-                <FontAwesome5 name="bolt" size={9} color={colors.bg} />
-                <Text style={s.paceBadgeText}>{formatPace(runner.pace)}</Text>
-              </View>
-              {neighborhoodSummary ? (
-                <View style={s.locationRow}>
-                  <FontAwesome5
-                    name="map-marker-alt"
-                    size={12}
-                    color={colors.textSecondary}
-                  />
-                  <Text style={s.locationText}>{neighborhoodSummary}</Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-        </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 60 }}
+      >
+        <RunnerHero
+          runner={runner}
+          myRunner={myRunner ?? undefined}
+          badge={connectedBadge}
+          paddingTop={insets.top + 64}
+          minHeight={320}
+        />
 
         <View style={s.content}>
-          {/* Coordinate — messages cue */}
           <View style={s.coordinateCard}>
             <View style={s.coordinateHeader}>
               <FontAwesome5
@@ -254,7 +233,12 @@ const ConnectedRunnerScreen = () => {
                 onPress={() => openInstagram(runner.instagram!)}
                 activeOpacity={0.8}
               >
-                <View style={s.messageIconWrap}>
+                <View
+                  style={[
+                    s.messageIconWrap,
+                    { backgroundColor: colors.instagram },
+                  ]}
+                >
                   <FontAwesome5
                     name="instagram"
                     size={18}
@@ -287,54 +271,62 @@ const ConnectedRunnerScreen = () => {
                 </Text>
               </View>
             )}
+
+            {runner.linkedin ? (
+              <TouchableOpacity
+                style={s.messageButton}
+                onPress={() => openLinkedIn(runner.linkedin!)}
+                activeOpacity={0.8}
+              >
+                <View
+                  style={[
+                    s.messageIconWrap,
+                    { backgroundColor: colors.linkedin },
+                  ]}
+                >
+                  <FontAwesome5
+                    name="linkedin"
+                    size={18}
+                    color={colors.textPrimary}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.messageTitle}>View on LinkedIn</Text>
+                  <Text style={s.messageHandle}>{runner.linkedin}</Text>
+                </View>
+                <FontAwesome5
+                  name="chevron-right"
+                  size={12}
+                  color={colors.textTertiary}
+                />
+              </TouchableOpacity>
+            ) : null}
           </View>
 
-          {/* Activity */}
-          <View style={s.activityCard}>
-            <View>
-              <NeighborhoodMap
-                neighborhood={runner.neighborhood ?? ''}
-                neighborhoods={runner.run_neighborhoods}
-                height={160}
-              />
-              <LinearGradient
-                colors={['transparent', colors.overlayMedium, colors.surface]}
-                locations={[0, 0.55, 1]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                style={s.mapGradient}
-              />
-            </View>
-            <View style={s.statsRow}>
-              <View style={s.statBlock}>
-                <Text style={s.statLabel}>PACE</Text>
-                <Text style={s.statValue}>{formatPace(runner.pace)}</Text>
-              </View>
-              <View style={s.statDivider} />
-              <View style={s.statBlock}>
-                <Text style={s.statLabel}>DISTANCE</Text>
-                <Text style={s.statValue}>
-                  {runner.distance_min}–{runner.distance_max} mi
-                </Text>
-              </View>
-            </View>
-          </View>
+          <RunnerActivityCard
+            runner={runner}
+            stats={activityStats}
+            mapHeight={160}
+          />
 
-          {/* Schedule */}
           {scheduleChips.length > 0 ? (
             <View style={s.section}>
               <Text style={s.sectionLabel}>SCHEDULE</Text>
               <View style={s.chipsWrap}>
-                {scheduleChips.map(chip => (
-                  <View key={chip} style={s.chip}>
-                    <Text style={s.chipText}>{chip}</Text>
-                  </View>
-                ))}
+                {scheduleChips.map(chip => {
+                  const matched = !!myRunner && scheduleChipMatch(chip)
+                  return (
+                    <View key={chip} style={[s.chip, matched && s.chipMatchBg]}>
+                      <Text style={[s.chipText, matched && s.chipTextMatch]}>
+                        {chip}
+                      </Text>
+                    </View>
+                  )
+                })}
               </View>
             </View>
           ) : null}
 
-          {/* About */}
           {runner.bio ? (
             <View style={s.section}>
               <Text style={s.sectionLabel}>ABOUT</Text>
@@ -342,11 +334,34 @@ const ConnectedRunnerScreen = () => {
             </View>
           ) : null}
 
-          {/* Goals */}
-          {runner.goals ? (
+          {goalChips.length > 0 ? (
             <View style={s.section}>
               <Text style={s.sectionLabel}>GOALS</Text>
-              <Text style={s.bodyText}>{runner.goals}</Text>
+              <View style={s.chipsWrap}>
+                {goalChips.map(goal => {
+                  const matched = !!myRunner && isGoalMatch(myRunner, goal)
+                  return (
+                    <View key={goal} style={[s.chip, matched && s.chipMatchBg]}>
+                      <Text style={[s.chipText, matched && s.chipTextMatch]}>
+                        {goal}
+                      </Text>
+                    </View>
+                  )
+                })}
+              </View>
+            </View>
+          ) : null}
+
+          {racesAndClubs.length > 0 ? (
+            <View style={s.section}>
+              <Text style={s.sectionLabel}>RACES & CLUBS</Text>
+              <View style={s.chipsWrap}>
+                {racesAndClubs.map(tag => (
+                  <View key={tag} style={s.chip}>
+                    <Text style={s.chipText}>{tag}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
           ) : null}
 
@@ -388,28 +403,15 @@ const ConnectedRunnerScreen = () => {
 }
 
 const s = StyleSheet.create({
-  heroCard: {
-    backgroundColor: colors.surface,
-    minHeight: 320,
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
+  content: {
+    padding: 20,
+    gap: 12,
   },
-  heroWatermark: {
-    position: 'absolute',
-    right: -24,
-    top: -16,
-    opacity: 0.07,
-  },
-  heroContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    gap: 10,
-  },
+
   connectedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    alignSelf: 'flex-start',
     backgroundColor: colors.accent + '18',
     borderRadius: radii.full,
     paddingVertical: 5,
@@ -419,47 +421,6 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: colors.accent,
-  },
-  heroName: {
-    fontSize: 38,
-    fontWeight: '900',
-    color: colors.textPrimary,
-    letterSpacing: -1,
-  },
-  heroMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  paceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: colors.accent,
-    borderRadius: radii.full,
-    paddingVertical: 5,
-    paddingHorizontal: 11,
-  },
-  paceBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.bg,
-    letterSpacing: -0.2,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  locationText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-
-  content: {
-    padding: 20,
-    gap: 12,
-    paddingBottom: 60,
   },
 
   coordinateCard: {
@@ -501,7 +462,6 @@ const s = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: colors.instagram,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -527,48 +487,6 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: colors.textTertiary,
     fontStyle: 'italic',
-  },
-
-  activityCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  mapGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 56,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    marginTop: -1,
-  },
-  statBlock: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 16,
-    gap: 4,
-  },
-  statLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textTertiary,
-    letterSpacing: 0.8,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.accent,
-    letterSpacing: -0.3,
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: colors.border,
-    marginVertical: 12,
   },
 
   section: {
@@ -601,10 +519,17 @@ const s = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 14,
   },
+  chipMatchBg: {
+    backgroundColor: colors.accentSubtle,
+  },
   chipText: {
     fontSize: 13,
     fontWeight: '500',
     color: colors.textPrimary,
+  },
+  chipTextMatch: {
+    color: colors.accentDim,
+    fontWeight: '700',
   },
 
   safetyNote: {

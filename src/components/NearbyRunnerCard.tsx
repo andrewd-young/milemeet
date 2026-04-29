@@ -7,6 +7,16 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome5 } from '@expo/vector-icons'
 
 import { colors, radii } from '../app/theme'
+import {
+  formatNeighborhoodSummary,
+  formatPace,
+  getNeighborhoods,
+} from '../lib/helpers/formatters'
+import {
+  isGoalMatch,
+  isNeighborhoodMatch,
+  isPaceMatch,
+} from '../lib/helpers/matchHelpers'
 import type { Tables } from '../types/supabase'
 
 type Runner = Tables<'runners'>
@@ -14,19 +24,57 @@ type Runner = Tables<'runners'>
 type NearbyRunnerCardProps = {
   runner: Runner
   onPress: () => void
+  score?: number
+  myRunner?: Runner
+  activeFilterDays?: string[]
+  activeFilterTimes?: string[]
 }
 
-const formatPace = (pace: number) => {
-  const m = Math.floor(pace)
-  const s = Math.round((pace - m) * 60)
-  return `${m}:${s.toString().padStart(2, '0')}/mi`
-}
+const NearbyRunnerCard = ({
+  runner,
+  onPress,
+  score,
+  myRunner,
+  activeFilterDays = [],
+  activeFilterTimes = [],
+}: NearbyRunnerCardProps) => {
+  const canCompare = !!myRunner && myRunner.id !== runner.id
+  const paceMatch = canCompare && isPaceMatch(myRunner!, runner)
+  const neighborhoodMatch = canCompare && isNeighborhoodMatch(myRunner!, runner)
 
-const NearbyRunnerCard = ({ runner, onPress }: NearbyRunnerCardProps) => {
-  const scheduleChips = [
+  const schedulePills = [
     ...(runner.run_days ?? []),
     ...(runner.run_times ?? []),
   ]
+  const goalsPills = runner.goals
+    ? runner.goals
+        .split(',')
+        .map(g => g.trim())
+        .filter(Boolean)
+    : []
+  const allPills = [...schedulePills, ...goalsPills].slice(0, 6)
+
+  const myDays = new Set(myRunner?.run_days ?? [])
+  const myTimes = new Set(myRunner?.run_times ?? [])
+
+  const isFilterMatch = (chip: string) =>
+    activeFilterDays.includes(chip) || activeFilterTimes.includes(chip)
+
+  const isUserMatch = (chip: string) => {
+    if (!canCompare) return false
+    if (myDays.has(chip) || myTimes.has(chip)) return true
+    return isGoalMatch(myRunner!, chip)
+  }
+
+  const neighborhoodSummary = formatNeighborhoodSummary(
+    getNeighborhoods(runner),
+  )
+
+  const metaParts = [
+    `${formatPace(runner.pace)}/mi`,
+    `${runner.distance_min}–${runner.distance_max} mi`,
+    neighborhoodSummary,
+  ].filter(Boolean)
 
   return (
     <TouchableOpacity style={s.card} onPress={onPress} activeOpacity={0.85}>
@@ -45,48 +93,69 @@ const NearbyRunnerCard = ({ runner, onPress }: NearbyRunnerCardProps) => {
         style={StyleSheet.absoluteFill}
       />
 
+      {score !== undefined ? (
+        <View style={s.scoreBadge}>
+          <Text style={s.scorePct}>{score}%</Text>
+          <Text style={s.scoreLabel}>match</Text>
+        </View>
+      ) : null}
+
       <View style={s.cardContent}>
         <View style={s.nameRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.cardName}>{runner.name}</Text>
-            {runner.neighborhood ? (
-              <View style={s.locationRow}>
-                <FontAwesome5
-                  name="map-marker-alt"
-                  size={11}
-                  color={colors.textSecondary}
-                />
-                <Text style={s.cardNeighborhood}>{runner.neighborhood}</Text>
-              </View>
-            ) : null}
-          </View>
-          <View style={s.paceBadge}>
-            <FontAwesome5 name="bolt" size={9} color={colors.bg} />
-            <Text style={s.paceBadgeText}>{formatPace(runner.pace)}</Text>
-          </View>
+          <Text style={s.cardName}>{runner.name}</Text>
+          {runner.linkedin ? (
+            <View style={s.linkedinBadge}>
+              <FontAwesome5 name="linkedin" size={11} color={colors.linkedin} />
+            </View>
+          ) : null}
         </View>
 
-        <Text style={s.distanceText}>
-          {runner.distance_min}-{runner.distance_max}{' '}
-          <Text style={s.distanceUnit}>mi range</Text>
+        <Text style={s.metaLine}>
+          {metaParts.map((part, i) => (
+            <React.Fragment key={part}>
+              {i > 0 && <Text style={s.metaBase}>{'  ·  '}</Text>}
+              <Text
+                style={[
+                  s.metaBase,
+                  i === 0 && paceMatch && s.metaMatch,
+                  i === metaParts.length - 1 &&
+                    neighborhoodSummary === part &&
+                    neighborhoodMatch &&
+                    s.metaMatch,
+                ]}
+              >
+                {part}
+              </Text>
+            </React.Fragment>
+          ))}
         </Text>
 
-        {scheduleChips.length > 0 ? (
+        {allPills.length > 0 ? (
           <View style={s.chipsRow}>
-            {scheduleChips.slice(0, 5).map(chip => (
-              <View key={chip} style={s.chip}>
-                <Text style={s.chipText}>{chip}</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        {runner.goals ? (
-          <View style={s.goalsRow}>
-            <Text style={s.goalsLabel}>GOALS</Text>
-            <Text style={s.goalsText} numberOfLines={2}>
-              {runner.goals}
-            </Text>
+            {allPills.map(chip => {
+              const filterMatch = isFilterMatch(chip)
+              const userMatch = !filterMatch && isUserMatch(chip)
+              return (
+                <View
+                  key={chip}
+                  style={[
+                    s.chip,
+                    userMatch && s.chipUserMatch,
+                    filterMatch && s.chipFilterMatch,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      s.chipText,
+                      userMatch && s.chipTextUserMatch,
+                      filterMatch && s.chipTextFilterMatch,
+                    ]}
+                  >
+                    {chip}
+                  </Text>
+                </View>
+              )
+            })}
           </View>
         ) : null}
 
@@ -117,15 +186,35 @@ const s = StyleSheet.create({
     top: -16,
     opacity: 0.07,
   },
+  scoreBadge: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    alignItems: 'flex-end',
+    zIndex: 1,
+  },
+  scorePct: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.violet,
+    letterSpacing: -0.5,
+  },
+  scoreLabel: {
+    fontSize: 9,
+    fontWeight: '500',
+    color: colors.textTertiary,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    textAlign: 'right',
+  },
   cardContent: {
     padding: 18,
-    gap: 8,
+    gap: 10,
   },
-
   nameRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
+    alignItems: 'center',
+    gap: 8,
   },
   cardName: {
     fontSize: 22,
@@ -133,44 +222,25 @@ const s = StyleSheet.create({
     color: colors.textPrimary,
     letterSpacing: -0.5,
   },
-  locationRow: {
-    flexDirection: 'row',
+  linkedinBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    backgroundColor: colors.linkedin + '20',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 3,
+    justifyContent: 'center',
   },
-  cardNeighborhood: {
+  metaLine: {
     fontSize: 13,
+    letterSpacing: -0.1,
+  },
+  metaBase: {
     color: colors.textSecondary,
   },
-
-  paceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: colors.accent,
-    borderRadius: radii.full,
-    paddingVertical: 5,
-    paddingHorizontal: 11,
-    marginTop: 2,
-  },
-  paceBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.bg,
-    letterSpacing: -0.2,
-  },
-
-  distanceText: {
-    fontSize: 14,
+  metaMatch: {
+    color: colors.accentDim,
     fontWeight: '600',
-    color: colors.textPrimary,
   },
-  distanceUnit: {
-    fontWeight: '400',
-    color: colors.textSecondary,
-  },
-
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -182,30 +252,25 @@ const s = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: colors.elevated,
   },
+  chipUserMatch: {
+    backgroundColor: colors.accentSubtle,
+  },
+  chipFilterMatch: {
+    backgroundColor: colors.accent,
+  },
   chipText: {
     fontSize: 12,
     color: colors.textSecondary,
     fontWeight: '500',
   },
-
-  goalsRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
+  chipTextUserMatch: {
+    color: colors.accentDim,
+    fontWeight: '600',
   },
-  goalsLabel: {
-    fontSize: 11,
+  chipTextFilterMatch: {
+    color: colors.bg,
     fontWeight: '700',
-    letterSpacing: 0.6,
-    color: colors.textTertiary,
   },
-  goalsText: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-
   ctaBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -214,7 +279,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.accent,
     borderRadius: radii.full,
     paddingVertical: 13,
-    marginTop: 4,
+    marginTop: 2,
   },
   ctaText: {
     fontSize: 15,

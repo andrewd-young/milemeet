@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 import {
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -21,11 +22,10 @@ import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import GlassIconButton from '../../components/GlassIconButton'
+import { useMyRunner } from '../../context/MyRunnerContext'
 import { supabase } from '../../lib/api/supabase'
-import type { Tables } from '../../types/supabase'
+import { formatPace } from '../../lib/helpers/formatters'
 import { colors, radii } from '../theme'
-
-type Runner = Tables<'runners'>
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const TIMES = ['Morning', 'Afternoon', 'Evening']
@@ -48,18 +48,13 @@ const parsePace = (paceStr: string): number | null => {
   return parseInt(match[1], 10) + parseInt(match[2], 10) / 60
 }
 
-const formatPaceNumber = (pace: number): string => {
-  const minutes = Math.floor(pace)
-  const seconds = Math.round((pace - minutes) * 60)
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`
-}
-
 const EditProfileScreen = () => {
   const insets = useSafeAreaInsets()
   const router = useRouter()
-  const [runner, setRunner] = useState<Runner | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const { myRunner: runner, isLoading, refreshRunner } = useMyRunner()
+  const initialized = useRef(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [keyboardVisible, setKeyboardVisible] = useState(false)
 
   const [name, setName] = useState('')
   const [bio, setBio] = useState('')
@@ -70,64 +65,51 @@ const EditProfileScreen = () => {
   const [selectedGoals, setSelectedGoals] = useState<string[]>([])
   const [customGoals, setCustomGoals] = useState<string[]>([])
   const [goalInput, setGoalInput] = useState('')
+  const [pastRaces, setPastRaces] = useState<string[]>([])
+  const [runClubs, setRunClubs] = useState<string[]>([])
+  const [raceInput, setRaceInput] = useState('')
+  const [clubInput, setClubInput] = useState('')
   const [instagram, setInstagram] = useState('')
   const [linkedin, setLinkedin] = useState('')
   const [strava, setStrava] = useState('')
   const [stravaPublic, setStravaPublic] = useState(false)
 
   useEffect(() => {
-    fetchRunner()
-  }, [])
-
-  const fetchRunner = async () => {
-    setIsLoading(true)
-    try {
-      const { data: authData } = await supabase.auth.getUser()
-      const userId = authData.user?.id ?? null
-      let data: Runner | null = null
-
-      if (userId) {
-        const { data: byUser } = await supabase
-          .from('runners')
-          .select('*')
-          .eq('user_id', userId)
-          .maybeSingle()
-        data = byUser
-      }
-      if (!data) {
-        const { data: fallback } = await supabase
-          .from('runners')
-          .select('*')
-          .order('inserted_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        data = fallback
-      }
-
-      if (data) {
-        setRunner(data)
-        setName(data.name)
-        setBio(data.bio ?? '')
-        setPace(formatPaceNumber(data.pace))
-        setDistanceRange([data.distance_min, data.distance_max])
-        setSelectedDays(data.run_days ?? [])
-        setSelectedTimes(data.run_times ?? [])
-        if (data.goals) {
-          const parts = data.goals.split(', ')
-          setSelectedGoals(parts.filter(g => PRESET_GOALS.includes(g)))
-          setCustomGoals(parts.filter(g => !PRESET_GOALS.includes(g)))
-        }
-        setInstagram(data.instagram ?? '')
-        setLinkedin(data.linkedin ?? '')
-        setStrava(data.strava ?? '')
-        setStravaPublic(data.strava_public ?? false)
-      }
-    } catch {
-      Alert.alert('Error', 'Could not load your profile.')
-    } finally {
-      setIsLoading(false)
+    if (!runner || initialized.current) return
+    initialized.current = true
+    setName(runner.name)
+    setBio(runner.bio ?? '')
+    setPace(formatPace(runner.pace))
+    setDistanceRange([runner.distance_min, runner.distance_max])
+    setSelectedDays(runner.run_days ?? [])
+    setSelectedTimes(runner.run_times ?? [])
+    if (runner.goals) {
+      const parts = runner.goals.split(', ')
+      setSelectedGoals(parts.filter(g => PRESET_GOALS.includes(g)))
+      setCustomGoals(parts.filter(g => !PRESET_GOALS.includes(g)))
     }
-  }
+    setPastRaces(runner.past_races ?? [])
+    setRunClubs(runner.run_clubs ?? [])
+    setInstagram(runner.instagram ?? '')
+    setLinkedin(runner.linkedin ?? '')
+    setStrava(runner.strava ?? '')
+    setStravaPublic(runner.strava_public ?? false)
+  }, [runner])
+
+  useEffect(() => {
+    const show = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true),
+    )
+    const hide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false),
+    )
+    return () => {
+      show.remove()
+      hide.remove()
+    }
+  }, [])
 
   const toggle = (
     item: string,
@@ -149,6 +131,22 @@ const EditProfileScreen = () => {
       setCustomGoals(prev => [...prev, trimmed])
     }
     setGoalInput('')
+  }
+
+  const addRace = () => {
+    const trimmed = raceInput.trim()
+    if (trimmed && !pastRaces.includes(trimmed)) {
+      setPastRaces(prev => [...prev, trimmed])
+    }
+    setRaceInput('')
+  }
+
+  const addClub = () => {
+    const trimmed = clubInput.trim()
+    if (trimmed && !runClubs.includes(trimmed)) {
+      setRunClubs(prev => [...prev, trimmed])
+    }
+    setClubInput('')
   }
 
   const handleSave = async () => {
@@ -182,6 +180,8 @@ const EditProfileScreen = () => {
           run_days: selectedDays,
           run_times: selectedTimes,
           goals: allGoals.length > 0 ? allGoals.join(', ') : null,
+          past_races: pastRaces.length > 0 ? pastRaces : null,
+          run_clubs: runClubs.length > 0 ? runClubs : null,
           instagram: instagram.trim() || null,
           linkedin: linkedin.trim() || null,
           strava: strava.trim() || null,
@@ -191,6 +191,7 @@ const EditProfileScreen = () => {
         .eq('id', runner.id)
 
       if (error) throw error
+      await refreshRunner()
       router.back()
     } catch (error) {
       Alert.alert(
@@ -469,11 +470,100 @@ const EditProfileScreen = () => {
                   onPress={addCustomGoal}
                   style={s.goalInputAdd}
                 >
-                  <Ionicons
-                    name="return-down-back"
-                    size={18}
-                    color={colors.accent}
-                  />
+                  <Text style={s.goalInputAddText}>Add</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* Races & Clubs */}
+          <View style={s.section}>
+            <Text style={s.sectionLabel}>RACES & CLUBS</Text>
+            {pastRaces.length > 0 && (
+              <View style={[s.chipGrid, { marginBottom: 10 }]}>
+                {pastRaces.map(race => (
+                  <TouchableOpacity
+                    key={race}
+                    style={s.customTag}
+                    onPress={() =>
+                      setPastRaces(prev => prev.filter(r => r !== race))
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <Text style={s.customTagText}>{race}</Text>
+                    <Ionicons
+                      name="close"
+                      size={12}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            <View style={s.goalInputRow}>
+              <TextInput
+                style={s.goalInput}
+                value={raceInput}
+                onChangeText={setRaceInput}
+                onSubmitEditing={addRace}
+                placeholder="Add a race..."
+                placeholderTextColor={colors.textTertiary}
+                keyboardAppearance="dark"
+                selectionColor={colors.accent}
+                returnKeyType="done"
+                blurOnSubmit={false}
+                autoCorrect={false}
+              />
+              {raceInput.trim().length > 0 && (
+                <TouchableOpacity onPress={addRace} style={s.goalInputAdd}>
+                  <Text style={s.goalInputAddText}>Add</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={s.stepperDivider} />
+            {runClubs.length > 0 && (
+              <View style={[s.chipGrid, { marginTop: 12, marginBottom: 10 }]}>
+                {runClubs.map(club => (
+                  <TouchableOpacity
+                    key={club}
+                    style={s.customTag}
+                    onPress={() =>
+                      setRunClubs(prev => prev.filter(c => c !== club))
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <Text style={s.customTagText}>{club}</Text>
+                    <Ionicons
+                      name="close"
+                      size={12}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            <View
+              style={[
+                s.goalInputRow,
+                { marginTop: runClubs.length > 0 ? 0 : 12 },
+              ]}
+            >
+              <TextInput
+                style={s.goalInput}
+                value={clubInput}
+                onChangeText={setClubInput}
+                onSubmitEditing={addClub}
+                placeholder="Add a run club..."
+                placeholderTextColor={colors.textTertiary}
+                keyboardAppearance="dark"
+                selectionColor={colors.accent}
+                returnKeyType="done"
+                blurOnSubmit={false}
+                autoCorrect={false}
+              />
+              {clubInput.trim().length > 0 && (
+                <TouchableOpacity onPress={addClub} style={s.goalInputAdd}>
+                  <Text style={s.goalInputAddText}>Add</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -542,7 +632,7 @@ const EditProfileScreen = () => {
           </View>
         </ScrollView>
 
-        <View style={[s.footer, { paddingBottom: insets.bottom + 8 }]}>
+        <View style={[s.footer, { paddingBottom: keyboardVisible ? 16 : insets.bottom + 8 }]}>
           {isSaving ? (
             <View
               style={{
@@ -736,7 +826,16 @@ const s = StyleSheet.create({
     height: '100%',
   },
   goalInputAdd: {
-    paddingLeft: 10,
+    backgroundColor: colors.accent,
+    borderRadius: radii.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginLeft: 8,
+  },
+  goalInputAddText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.bg,
   },
   toggleRow: {
     flexDirection: 'row',
