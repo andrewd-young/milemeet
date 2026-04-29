@@ -21,6 +21,8 @@ type RunnerHeroProps = {
   runner: Runner
   myRunner?: Runner
   badge?: React.ReactNode
+  metaContent?: React.ReactNode
+  footer?: React.ReactNode
   paddingTop?: number
   minHeight?: number
 }
@@ -29,6 +31,8 @@ const RunnerHero = ({
   runner,
   myRunner,
   badge,
+  metaContent,
+  footer,
   paddingTop = 16,
   minHeight = 320,
 }: RunnerHeroProps) => {
@@ -57,31 +61,34 @@ const RunnerHero = ({
       <View style={[s.content, { paddingTop }]}>
         {badge ? <View style={s.badgeSlot}>{badge}</View> : null}
         <Text style={s.name}>{runner.name}</Text>
-        <View style={s.metaRow}>
-          <View style={[s.paceBadge, paceMatch && s.paceBadgeMatch]}>
-            <FontAwesome5 name="bolt" size={10} color={colors.bg} />
-            <Text style={s.paceBadgeText}>{formatPace(runner.pace)}/mi</Text>
-          </View>
-          {neighborhoodSummary ? (
-            <View style={s.locationRow}>
-              <FontAwesome5
-                name="map-marker-alt"
-                size={12}
-                color={
-                  neighborhoodMatch ? colors.accentDim : colors.textSecondary
-                }
-              />
-              <Text
-                style={[
-                  s.locationText,
-                  neighborhoodMatch && s.locationTextMatch,
-                ]}
-              >
-                {neighborhoodSummary}
-              </Text>
+        {metaContent ?? (
+          <View style={s.metaRow}>
+            <View style={[s.paceBadge, paceMatch && s.paceBadgeMatch]}>
+              <FontAwesome5 name="bolt" size={10} color={colors.bg} />
+              <Text style={s.paceBadgeText}>{formatPace(runner.pace)}/mi</Text>
             </View>
-          ) : null}
-        </View>
+            {neighborhoodSummary ? (
+              <View style={s.locationRow}>
+                <FontAwesome5
+                  name="map-marker-alt"
+                  size={12}
+                  color={
+                    neighborhoodMatch ? colors.accentDim : colors.textSecondary
+                  }
+                />
+                <Text
+                  style={[
+                    s.locationText,
+                    neighborhoodMatch && s.locationTextMatch,
+                  ]}
+                >
+                  {neighborhoodSummary}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        )}
+        {footer ?? null}
       </View>
     </View>
   )

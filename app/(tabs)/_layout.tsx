@@ -14,24 +14,32 @@ export default function TabsLayout() {
 
   const badgeValue = pendingCount > 0 ? String(pendingCount) : undefined
 
+  const tabProps = {
+    contentStyle: { backgroundColor: colors.bg },
+    unstable_nativeProps: {
+      experimental_userInterfaceStyle: 'dark' as const,
+      statusBarStyle: 'light' as const,
+    },
+  }
+
   return (
     <NativeTabs
       tintColor={colors.accent}
       disableTransparentOnScrollEdge
       blurEffect="systemUltraThinMaterialDark"
     >
-      <NativeTabs.Trigger name="index">
+      <NativeTabs.Trigger name="index" {...tabProps}>
         <NativeTabs.Trigger.Icon sf="figure.run" />
         <NativeTabs.Trigger.Label>Runners</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="connections">
+      <NativeTabs.Trigger name="connections" {...tabProps}>
         <NativeTabs.Trigger.Icon sf="person.2.fill" />
         <NativeTabs.Trigger.Label>Circle</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Badge hidden={!badgeValue}>
           {badgeValue}
         </NativeTabs.Trigger.Badge>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
+      <NativeTabs.Trigger name="profile" {...tabProps}>
         <NativeTabs.Trigger.Icon sf="person.crop.circle.fill" />
         <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>

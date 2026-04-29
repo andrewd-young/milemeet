@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 
 import {
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -18,6 +17,7 @@ import { progressViewStyle, tint } from '@expo/ui/swift-ui/modifiers'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { colors, radii } from '../app/theme'
+import { useKeyboardVisible } from '../lib/hooks/useKeyboardVisible'
 import GlassIconButton from './GlassIconButton'
 
 interface Props {
@@ -47,22 +47,7 @@ export default function OnboardingLayout({
 }: Props) {
   const insets = useSafeAreaInsets()
   const router = useRouter()
-  const [keyboardVisible, setKeyboardVisible] = useState(false)
-
-  useEffect(() => {
-    const show = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setKeyboardVisible(true),
-    )
-    const hide = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setKeyboardVisible(false),
-    )
-    return () => {
-      show.remove()
-      hide.remove()
-    }
-  }, [])
+  const keyboardVisible = useKeyboardVisible()
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>

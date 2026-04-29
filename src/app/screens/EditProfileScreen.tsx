@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react'
 
 import {
   Alert,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -25,6 +24,7 @@ import GlassIconButton from '../../components/GlassIconButton'
 import { useMyRunner } from '../../context/MyRunnerContext'
 import { supabase } from '../../lib/api/supabase'
 import { formatPace } from '../../lib/helpers/formatters'
+import { useKeyboardVisible } from '../../lib/hooks/useKeyboardVisible'
 import { colors, radii } from '../theme'
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -54,7 +54,7 @@ const EditProfileScreen = () => {
   const { myRunner: runner, isLoading, refreshRunner } = useMyRunner()
   const initialized = useRef(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [keyboardVisible, setKeyboardVisible] = useState(false)
+  const keyboardVisible = useKeyboardVisible()
 
   const [name, setName] = useState('')
   const [bio, setBio] = useState('')
@@ -95,21 +95,6 @@ const EditProfileScreen = () => {
     setStrava(runner.strava ?? '')
     setStravaPublic(runner.strava_public ?? false)
   }, [runner])
-
-  useEffect(() => {
-    const show = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setKeyboardVisible(true),
-    )
-    const hide = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setKeyboardVisible(false),
-    )
-    return () => {
-      show.remove()
-      hide.remove()
-    }
-  }, [])
 
   const toggle = (
     item: string,
@@ -632,7 +617,12 @@ const EditProfileScreen = () => {
           </View>
         </ScrollView>
 
-        <View style={[s.footer, { paddingBottom: keyboardVisible ? 16 : insets.bottom + 8 }]}>
+        <View
+          style={[
+            s.footer,
+            { paddingBottom: keyboardVisible ? 16 : insets.bottom + 8 },
+          ]}
+        >
           {isSaving ? (
             <View
               style={{
