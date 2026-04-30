@@ -68,7 +68,7 @@ const NearbyRunnersScreen = () => {
       if (myRunner) {
         excludeIds.push(myRunner.id)
 
-        const [ownerConns, partnerConns] = await Promise.all([
+        const [ownerConns, partnerConns, blocks, reports] = await Promise.all([
           supabase
             .from('run_connections')
             .select('partner_runner_id')
@@ -77,15 +77,30 @@ const NearbyRunnersScreen = () => {
             .from('run_connections')
             .select('owner_runner_id')
             .eq('partner_runner_id', myRunner.id),
+          supabase
+            .from('user_blocks')
+            .select('blocked_runner_id')
+            .eq('blocker_runner_id', myRunner.id),
+          supabase
+            .from('user_reports')
+            .select('reported_runner_id')
+            .eq('reporter_runner_id', myRunner.id),
         ])
 
         ownerConns.data?.forEach(c => excludeIds.push(c.partner_runner_id))
         partnerConns.data?.forEach(c => excludeIds.push(c.owner_runner_id))
+        blocks.data?.forEach(b => {
+          if (b.blocked_runner_id) excludeIds.push(b.blocked_runner_id)
+        })
+        reports.data?.forEach(r => {
+          if (r.reported_runner_id) excludeIds.push(r.reported_runner_id)
+        })
       }
 
       let query = supabase
         .from('runners')
         .select('*')
+        .eq('banned', false)
         .order('inserted_at', { ascending: false })
         .limit(100)
 

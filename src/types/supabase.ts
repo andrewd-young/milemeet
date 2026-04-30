@@ -147,6 +147,7 @@ export type Database = {
       }
       runners: {
         Row: {
+          banned: boolean
           bio: string | null
           distance_max: number
           distance_min: number
@@ -172,6 +173,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          banned?: boolean
           bio?: string | null
           distance_max: number
           distance_min: number
@@ -197,6 +199,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          banned?: boolean
           bio?: string | null
           distance_max?: number
           distance_min?: number
@@ -222,6 +225,81 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      user_blocks: {
+        Row: {
+          blocked_runner_id: string | null
+          blocker_runner_id: string | null
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          blocked_runner_id?: string | null
+          blocker_runner_id?: string | null
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          blocked_runner_id?: string | null
+          blocker_runner_id?: string | null
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'user_blocks_blocked_runner_id_fkey'
+            columns: ['blocked_runner_id']
+            isOneToOne: false
+            referencedRelation: 'runners'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'user_blocks_blocker_runner_id_fkey'
+            columns: ['blocker_runner_id']
+            isOneToOne: false
+            referencedRelation: 'runners'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      user_reports: {
+        Row: {
+          created_at: string | null
+          id: string
+          reason: string | null
+          reported_runner_id: string | null
+          reporter_runner_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          reported_runner_id?: string | null
+          reporter_runner_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          reported_runner_id?: string | null
+          reporter_runner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'user_reports_reported_runner_id_fkey'
+            columns: ['reported_runner_id']
+            isOneToOne: false
+            referencedRelation: 'runners'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'user_reports_reporter_runner_id_fkey'
+            columns: ['reporter_runner_id']
+            isOneToOne: false
+            referencedRelation: 'runners'
+            referencedColumns: ['id']
+          },
+        ]
       }
     }
     Views: {

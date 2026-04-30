@@ -44,6 +44,7 @@ import {
 } from '../../lib/helpers/connectedRunnerHelpers'
 import { buildScheduleChips } from '../../lib/helpers/formatters'
 import { useKeyboardVisible } from '../../lib/hooks/useKeyboardVisible'
+import { useRunnerActions } from '../../lib/hooks/useRunnerActions'
 import type { Tables } from '../../types/supabase'
 import { globalStyles } from '../styles'
 import { colors, radii } from '../theme'
@@ -71,6 +72,8 @@ const ConnectedRunnerScreen = () => {
   const [isSending, setIsSending] = useState(false)
   const [isActing, setIsActing] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const { blockRunner, reportRunner } = useRunnerActions()
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const keyboardVisible = useKeyboardVisible()
 
@@ -184,7 +187,7 @@ const ConnectedRunnerScreen = () => {
           'Block Runner',
           'Report Runner',
         ],
-        destructiveButtonIndex: [1, 2],
+        destructiveButtonIndex: [2, 3],
         cancelButtonIndex: 0,
       },
       index => {
@@ -216,34 +219,64 @@ const ConnectedRunnerScreen = () => {
       `Block ${runner?.name ?? 'this runner'}? They will be removed from your connections and hidden from your feed.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Block',
-          style: 'destructive',
-          onPress: removeConnection,
-        },
+        { text: 'Block', style: 'destructive', onPress: handleBlock },
       ],
     )
   }
 
+  const handleBlock = async () => {
+    if (!runner) return
+    setIsActing(true)
+    try {
+      await blockRunner(runner, connection)
+      router.back()
+    } catch (err) {
+      if (__DEV__) console.error('[ConnectedRunner] block error:', err)
+      setErrorMessage(extractMessage(err))
+      setIsActing(false)
+    }
+  }
+
+  const REPORT_REASONS = [
+    'Inappropriate behavior',
+    'Harassment',
+    'Spam or fake profile',
+    'Safety concern',
+    'Other',
+  ]
+
   const confirmReport = () => {
-    Alert.alert(
-      'Report Runner',
-      `Report ${runner?.name ?? 'this runner'} for inappropriate behavior?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Report',
-          style: 'destructive',
-          onPress: async () => {
-            Alert.alert(
-              'Report submitted',
-              "Thank you. We'll review this shortly.",
-            )
-            router.back()
-          },
-        },
-      ],
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        title: `Why are you reporting ${runner?.name ?? 'this runner'}?`,
+        options: ['Cancel', ...REPORT_REASONS],
+        cancelButtonIndex: 0,
+        destructiveButtonIndex: [],
+      },
+      index => {
+        if (index === 0) return
+        const reason = REPORT_REASONS[index - 1]
+        Alert.alert(
+          'Report Runner',
+          `Report ${runner?.name ?? 'this runner'} for "${reason}"? They will be removed from your connections.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Report',
+              style: 'destructive',
+              onPress: () => handleReport(reason),
+            },
+          ],
+        )
+      },
     )
+  }
+
+  const handleReport = async (reason: string) => {
+    if (!runner) return
+    await reportRunner(runner, connection, reason)
+    Alert.alert('Report submitted', "Thank you. We'll review this shortly.")
+    router.back()
   }
 
   const removeConnection = async () => {
